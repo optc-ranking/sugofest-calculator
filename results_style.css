@@ -1,0 +1,174 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #eef1f5; /* Slightly different background for results */
+    color: #333;
+    font-size: 16px;
+}
+
+header {
+    background-color: #1d3557; /* Dark blue from entry page */
+    color: white;
+    padding: 15px 30px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+header h1 {
+    margin: 0;
+    font-size: 2em;
+    color: white;
+}
+.back-link {
+    color: #a8dadc; /* Light teal */
+    text-decoration: none;
+    font-size: 0.9em;
+}
+.back-link:hover {
+    text-decoration: underline;
+}
+
+main {
+    padding: 20px;
+    max-width: 1200px; /* Allow wider content on results page */
+    margin: 20px auto;
+}
+
+.card { 
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+
+.results-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.results-controls label {
+    font-weight: 600;
+    margin-bottom: 0;
+}
+.results-controls select {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+    min-width: 220px;
+}
+
+/* Checklist styling */
+#checklistContainerParent .banner-checklist-group {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background-color: #fdfdfd;
+}
+
+#checklistContainerParent .banner-checklist-group h4 { 
+    margin-top: 0; 
+    font-size: 1.3em; 
+    color: #1d3557;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+#checklistContainerParent .banner-checklist-group label { 
+    display: inline-flex; 
+    align-items: center;
+    margin-right: 25px; 
+    margin-bottom: 12px; 
+    font-weight: normal;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+#checklistContainerParent .banner-checklist-group label:hover {
+    color: #007bff;
+}
+#checklistContainerParent .banner-checklist-group input[type="checkbox"] {
+    margin-right: 8px;
+    height: 1.1em;
+    width: 1.1em;
+    accent-color: #007bff; 
+}
+.color-swatch { 
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-left: 6px;
+    border: 1px solid #ccc;
+    vertical-align: middle;
+}
+.checklist-container label .ev-display { /* Style for EV text */
+    font-size: 0.85em;
+    color: #555;
+    margin-left: 8px;
+    font-style: italic;
+}
+
+
+#chartContainerOuter {
+    padding: 15px; 
+}
+#chartContainer { 
+    position: relative; 
+    height: 60vh; 
+    min-height: 450px; 
+    width: 100%;
+}
+
+/* Download Section Styles */
+.download-section {
+    text-align: center;
+}
+.download-section h3 {
+    margin-top: 0;
+    color: #1d3557;
+}
+.download-section p {
+    font-size: 0.9em;
+    color: #444;
+    margin-bottom: 15px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.download-section hr.download-hr { /* Style for the new HR */
+    margin: 20px auto;
+    max-width: 80%;
+    border: 0;
+    border-top: 1px dashed #ccc;
+}
+#downloadDetailCsvBtn, 
+#downloadGraphCsvBtn { /* General style for download buttons */
+    background-color: #17a2b8 !important; /* Default to Teal */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 5px; 
+    margin-bottom: 5px; /* Ensure space between buttons if they wrap */
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.2s ease-in-out;
+    display: inline-block; /* Allow them to sit side-by-side if space, or wrap */
+}
+#downloadDetailCsvBtn:hover, 
+#downloadGraphCsvBtn:hover {
+    opacity: 0.85;
+}
+
+#downloadGraphCsvBtn { /* Specific color for the graph data download button */
+    background-color: #6f42c1 !important; /* A different color, e.g., purple */
+}
+
+
+/* General link styling if needed */
+a { color: #007bff; }
+a:hover { color: #0056b3; }

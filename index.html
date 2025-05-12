@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPTC Sugofest Calculator - Multi-Banner Entry</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>OPTC Sugofest Multi-Banner Calculator</h1>
+
+    <div class="state-controls card">
+        <h3>Manage Setups</h3>
+        <div>
+            <label for="saveSetupName">Save Current Multi-Banner Setup As:</label>
+            <input type="text" id="saveSetupName" placeholder="Enter setup name">
+            <button id="saveNamedStateBtn">Save</button>
+        </div>
+        <div>
+            <label for="loadSetupSelect">Load Setup:</label>
+            <select id="loadSetupSelect">
+                <option value="">-- Select a saved setup --</option>
+            </select>
+            <button id="loadNamedStateBtn">Load Selected</button>
+            <button id="deleteNamedStateBtn" class="remove-button">Delete Selected</button>
+        </div>
+    </div>
+    <hr>
+
+    <div class="card">
+        <h2>Banner Management</h2>
+        <div id="bannerTabsContainer" class="banner-tabs">
+            <!-- Banner tabs will be dynamically added here -->
+        </div>
+        <div class="banner-controls">
+            <button id="addBannerBtn" class="add-button">Add New Banner</button>
+            <input type="text" id="renameBannerInput" placeholder="New name for active banner">
+            <button id="renameBannerBtn" class="utility-button">Rename Active Banner</button>
+            <button id="deleteBannerBtn" class="remove-button">Delete Active Banner</button>
+        </div>
+    </div>
+    <hr>
+    
+    <div id="activeBannerContent" class="active-banner-content">
+        <!-- Content of the currently active banner will be loaded here -->
+        <!-- This will be populated by the bannerContentTemplate -->
+    </div>
+    <hr>
+
+    <a href="results.html" target="_blank" id="calculateBtnLink" class="button-link proceed-button">
+        Proceed to Calculate All Banners & View Results (New Tab)
+    </a>
+
+    <!-- TEMPLATE FOR A SINGLE BANNER'S ENTIRE CONTENT -->
+    <template id="bannerContentTemplate">
+        <div class="banner-data-container">
+            <div class="card">
+                <h2>Global Banner Settings</h2>
+                <label>Total Number of Multis to Calculate For This Banner:</label>
+                <input type="number" class="total-multis-input" value="30" min="1" step="1">
+            </div>
+            <hr>
+            <div class="card">
+                <h2>Sugofest Step Definitions (for this banner)</h2>
+                <div class="steps-definition-container"></div>
+                <button class="add-step-btn add-button-small">Add Sugofest Step</button>
+            </div>
+            <hr>
+            <div class="card">
+                <h2>Unit Specific Rates (for this banner)</h2>
+                <div class="units-container"></div>
+                <button class="add-unit-btn add-button-small">Add Unit</button>
+            </div>
+            <hr>
+            <div class="card">
+                <h2>Custom Analysis Groups (for this banner)</h2>
+                <div class="analysis-targets-container"></div>
+                <button class="add-analysis-target-btn add-button-small">Add Custom Analysis Group</button>
+            </div>
+        </div>
+    </template>
+
+
+    <!-- SUB-TEMPLATES (used within bannerContentTemplate's sections) -->
+    <template id="unitTemplate">
+        <div class="unit-block item-block">
+            <div class="item-header">
+                <input type="text" class="unit-name" placeholder="Unit Name">
+                <label>Univ. Base Rate (%):
+                    <input type="number" class="unit-universal-base-rate" value="0.500" step="0.001" min="0">
+                </label>
+                <button class="use-base-rate-btn utility-button">Apply Univ.</button>
+                <button class="remove-item-btn remove-button">X Unit</button>
+            </div>
+            <div class="unit-steps-rates-container item-details"></div>
+        </div>
+    </template>
+
+    <template id="stepDefinitionTemplate">
+        <div class="step-definition-block item-block">
+            <div class="item-header">
+                <h4>Step <span class="step-number">1</span></h4>
+                <button class="remove-item-btn remove-button">X Step</button>
+            </div>
+            <div class="item-details">
+                <label>Multi Numbers (comma-sep):
+                    <input type="text" class="step-multis" placeholder="e.g., 1,3,5">
+                </label>
+                <label>Gem Cost:
+                   <input type="number" class="step-gem-cost" value="50" min="0" step="1">
+                </label>
+            </div>
+        </div>
+    </template>
+
+    <template id="unitStepRateTemplate">
+        <div class="unit-step-rate-entry sub-item-block">
+            <h5>Step <span class="unit-step-number-display">X</span> (Multis: <span class="unit-step-multis-display">N/A</span>)</h5>
+            <label>Base Rate (10 pulls) (%):
+                <input type="number" class="unit-step-base-rate" value="0.500" step="0.001" min="0">
+            </label>
+            <label>Final Poster Rate (%):
+                <input type="number" class="unit-step-final-poster-rate" value="0.500" step="0.001" min="0">
+            </label>
+        </div>
+    </template>
+
+    <template id="analysisTargetTemplate">
+        <div class="analysis-target-block item-block">
+            <div class="item-header">
+                <input type="text" class="analysis-name" placeholder="Custom Group Name">
+                <button class="remove-item-btn remove-button">X Group</button>
+            </div>
+            <div class="item-details">
+                <p>Constituent Units:</p>
+                <div class="constituent-units-container"></div>
+                <button class="add-constituent-unit-btn add-button-small">Add Unit to Group</button>
+            </div>
+        </div>
+    </template>
+
+    <template id="constituentUnitTemplate">
+        <div class="constituent-unit-entry sub-item-block">
+            <label>Unit: <select class="constituent-unit-select"></select></label>
+            <label>Multiplier: <input type="number" class="constituent-unit-multiplier" value="1" min="1" step="1"></label>
+            <button class="remove-constituent-btn remove-button-small">X</button>
+        </div>
+    </template>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,233 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f2f5; 
+    color: #333;
+    font-size: 16px;
+}
+
+h1, h2, h3, h4, h5 {
+    color: #1d3557; 
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+h1 { font-size: 2.2em; text-align: center; margin-bottom: 1em; }
+h2 { font-size: 1.8em; border-bottom: 2px solid #457b9d; padding-bottom: 0.2em;}
+h3 { font-size: 1.5em; }
+h4 { font-size: 1.2em; }
+
+hr {
+    margin: 30px 0;
+    border: 0;
+    border-top: 1px solid #ddd;
+}
+
+.card {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.state-controls div, .banner-controls div {
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.state-controls label, .banner-controls label {
+    font-weight: bold;
+    min-width: 150px; 
+}
+.banner-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+.banner-controls input[type="text"] {
+    flex-grow: 1;
+    max-width: 250px;
+}
+
+
+.add-button,
+.button-link,
+.state-controls button,
+.utility-button,
+.banner-controls button {
+    background-color: #007bff; 
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    margin-top: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    font-size: 1em;
+    transition: background-color 0.2s ease-in-out;
+    display: inline-block;
+}
+.add-button-small {
+    padding: 6px 12px !important;
+    font-size: 0.9em !important;
+    margin-top: 5px !important;
+}
+
+.proceed-button {
+    background-color: #28a745 !important; 
+    display: block !important;
+    width: fit-content; /* Auto width */
+    margin: 20px auto;
+    font-size: 1.1em;
+    padding: 12px 25px;
+}
+
+.remove-button {
+    background-color: #dc3545 !important; 
+}
+.remove-button-small {
+    background-color: #e67e88 !important; 
+    padding: 4px 8px !important;
+    font-size: 0.8em !important;
+    min-width: 30px; /* Ensure 'X' buttons have some width */
+}
+
+
+.utility-button {
+    background-color: #ffc107 !important; 
+    color: #212529 !important;
+}
+
+
+.add-button:hover,
+.button-link:hover,
+.state-controls button:hover,
+.utility-button:hover,
+.remove-button:hover {
+    opacity: 0.85;
+}
+
+
+input[type="text"],
+input[type="number"],
+select { 
+    padding: 10px;
+    margin: 5px 0 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 1em;
+    width: 100%; 
+    max-width: 350px; 
+}
+label > input[type="text"],
+label > input[type="number"],
+label > select {
+    width: auto; 
+    max-width: 250px;
+}
+
+
+select[multiple] {
+    min-height: 70px;
+}
+
+label {
+    display: block;
+    margin-bottom: 3px;
+    font-weight: 600; 
+    color: #333;
+}
+
+.item-block { 
+    background-color: #fdfdfd; 
+    border: 1px solid #e0e0e0;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+}
+
+.item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; 
+    gap: 10px; /* Reduced gap */
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+.item-header h4 { margin: 0; font-size: 1.1em; } /* Smaller step header */
+.item-header input[type="text"] { flex-grow: 1; margin-right: 5px;} 
+.item-header label { margin-bottom: 0; white-space: nowrap;} /* Univ. base rate label */
+.item-header button { margin-left: 5px; }
+
+
+.item-details {
+    padding-left: 5px;
+}
+.item-details > p { font-weight: 600; margin-bottom: 8px;}
+
+.sub-item-block { 
+    background-color: #f9f9f9;
+    padding: 12px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.sub-item-block h5 { margin: 0 0 8px 0; width: 100%; color: #555; font-size: 1em;}
+.sub-item-block label { margin-bottom: 0; flex-grow: 1; min-width: 150px; }
+.sub-item-block input, .sub-item-block select { max-width: 200px; }
+.sub-item-block button { margin-left: auto; } 
+
+/* Banner Tabs */
+.banner-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: -1px; /* Overlap with active banner content border */
+}
+.banner-tab {
+    padding: 10px 15px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    background-color: #f9f9f9;
+    margin-right: 5px;
+    border-radius: 6px 6px 0 0;
+    transition: background-color 0.2s, color 0.2s;
+}
+.banner-tab.active {
+    background-color: #fff;
+    border-bottom: 1px solid #fff; /* Make it look connected to content */
+    color: #007bff;
+    font-weight: bold;
+}
+.banner-tab:hover {
+    background-color: #efefef;
+}
+
+.active-banner-content {
+    border: 1px solid #ddd;
+    padding: 20px;
+    background-color: #fff;
+    border-top-right-radius: 6px; /* If first tab is not active */
+     border-bottom-left-radius: 6px;
+     border-bottom-right-radius: 6px;
+}
+.banner-data-container .card {
+    margin-left: 0;
+    margin-right: 0;
+}
