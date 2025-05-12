@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => { // Added async for await
     // --- DOM Elements ---
     const bannerTabsContainer = document.getElementById('bannerTabsContainer');
     const activeBannerContent = document.getElementById('activeBannerContent');
@@ -14,6 +14,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadNamedStateBtn = document.getElementById('loadNamedStateBtn');
     const deleteNamedStateBtn = document.getElementById('deleteNamedStateBtn');
 
+    const importJsonInput = document.getElementById('importJsonInput');
+    const importJsonBtn = document.getElementById('importJsonBtn');
+    const exportJsonBtn = document.getElementById('exportJsonBtn');
+
     // --- Templates ---
     const bannerContentTemplate = document.getElementById('bannerContentTemplate');
     const unitTemplate = document.getElementById('unitTemplate');
@@ -25,14 +29,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let banners = []; 
     let activeBannerId = null;
-    let globalDefaultUnitNameCounter = 0; // For unique default unit names across all banners if needed
-    const SAVED_SETUPS_KEY = 'sugofestMultiBannerSetups';
-    const LAST_CALCULATED_STATE_KEY = '__last_calculated_banner_state__';
+    let globalDefaultUnitNameCounter = 0;
+    const SAVED_SETUPS_KEY = 'sugofestMultiBannerSetups_v2'; 
+    const LAST_CALCULATED_STATE_KEY = '__last_calculated_banner_state_v2__';
+    const DEFAULT_SETUPS_MANIFEST_PATH = 'default-setups-manifest.json';
 
 
     // --- UTILITY ---
     function generateUniqueId(prefix) {
         return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    function getCurrentTimestamp() {
+        return new Date().toISOString();
+    }
+
+    function getFilenameWithoutExtension(filename) {
+        return filename.substring(0, filename.lastIndexOf('.')) || filename;
     }
 
     // --- STEP & UNIT DISPLAY UPDATES ---
@@ -45,13 +58,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const globalStepBlocks = currentBannerStepsContainer.querySelectorAll('.step-definition-block');
         globalStepBlocks.forEach((gsBlock, index) => {
             gsBlock.querySelector('.step-number').textContent = index + 1;
-            // gsBlock.dataset.stepDefIndex = index; // Redundant if stepData.id is used
-
+            const stepDataId = gsBlock.dataset.stepId;
             const currentBannerUnitsContainer = activeBannerContent.querySelector('.units-container');
             if (!currentBannerUnitsContainer) return;
             currentBannerUnitsContainer.querySelectorAll('.unit-block').forEach(unitBlock => {
-                // Find step-rate-entry by stepData.id (more robust)
-                const stepDataId = gsBlock.dataset.stepId;
                 const unitStepEntry = unitBlock.querySelector(`.unit-step-rate-entry[data-step-ref-id="${stepDataId}"]`);
                 if (unitStepEntry) {
                     unitStepEntry.querySelector('.unit-step-number-display').textContent = index + 1;
@@ -72,7 +82,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (unitDataToLoad) {
             unitName = unitDataToLoad.name;
         } else {
-            // Ensure unique default names within THIS banner
             let bannerUnitCounter = currentBanner.units.length + 1;
             const existingNames = new Set(currentBanner.units.map(u => u.name));
             do {
@@ -88,6 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
             stepOverrides: []
         };
         if (!unitDataToLoad) currentBanner.units.push(newUnitData);
+        else if (!currentBanner.units.find(u => u.id === newUnitId)) currentBanner.units.push(newUnitData);
+
 
         const container = activeBannerContent.querySelector('.units-container');
         if (container) {
@@ -101,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ratesContainer) { console.error("Rates container not found for unit", unitBlockDOM); return; }
 
         const entryInstance = unitStepRateTemplate.content.cloneNode(true);
-        const entryElement = entryInstance.firstElementChild; // Get the actual <div class="unit-step-rate-entry...">
+        const entryElement = entryInstance.firstElementChild; 
         entryElement.dataset.stepRefId = stepData.id; 
         entryElement.querySelector('.unit-step-number-display').textContent = stepVisualIndex + 1;
         entryElement.querySelector('.unit-step-multis-display').textContent = (Array.isArray(stepData.appliesToMultis) ? stepData.appliesToMultis.join(',') : '') || 'N/A';
@@ -125,42 +136,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newStepId = stepDataToLoad ? stepDataToLoad.id : generateUniqueId('step');
         const newStepData = stepDataToLoad || { id: newStepId, appliesToMultis: [], gemCost: 50 };
+        
         if (!stepDataToLoad) currentBanner.steps.push(newStepData);
+        else if (!currentBanner.steps.find(s => s.id === newStepId)) currentBanner.steps.push(newStepData);
+
 
         const container = activeBannerContent.querySelector('.steps-definition-container');
         if (container) {
-            renderStepDefinition(container, newStepData, currentBanner.units);
+            renderStepDefinition(container, newStepData); 
         }
-        // New step requires adding rate entries to all existing units in this banner
         const unitsContainerInBanner = activeBannerContent.querySelector('.units-container');
         if (unitsContainerInBanner) {
              unitsContainerInBanner.querySelectorAll('.unit-block').forEach(unitBlockDOM => {
                 const unitId = unitBlockDOM.dataset.unitId;
                 const unitInModel = currentBanner.units.find(u => u.id === unitId);
                 if (unitInModel && !unitBlockDOM.querySelector(`.unit-step-rate-entry[data-step-ref-id="${newStepData.id}"]`)) {
-                    // Find the visual index for the new step
-                    const visualIndex = Array.from(container.children).length -1; // current length - 1 if just added
+                    const visualIndex = Array.from(container.children).length -1;
                      addUnitStepRateEntryToUnit(unitBlockDOM, newStepData, visualIndex, null, unitInModel.universalBaseRate);
                 }
             });
         }
-         updateStepNumbersAndDisplays(); // After all DOM changes
+         updateStepNumbersAndDisplays();
     }
 
     // --- UI RENDERING for current active banner ---
-    function renderStepDefinition(container, stepData, unitsInBanner) {
+    function renderStepDefinition(container, stepData) { 
         const stepInstance = stepDefinitionTemplate.content.cloneNode(true);
-        const blockElement = stepInstance.firstElementChild; // Get the <div class="step-definition-block item-block">
+        const blockElement = stepInstance.firstElementChild; 
         blockElement.dataset.stepId = stepData.id;
         blockElement.querySelector('.step-multis').value = Array.isArray(stepData.appliesToMultis) ? stepData.appliesToMultis.join(',') : '';
         blockElement.querySelector('.step-gem-cost').value = stepData.gemCost;
         container.appendChild(blockElement);
-        // updateStepNumbersAndDisplays is called after all steps are rendered or after add/remove
     }
 
      function renderUnit(container, unitData, stepsInBanner) {
         const unitInstance = unitTemplate.content.cloneNode(true);
-        const blockElement = unitInstance.firstElementChild; // Get <div class="unit-block item-block">
+        const blockElement = unitInstance.firstElementChild; 
         blockElement.dataset.unitId = unitData.id;
         blockElement.querySelector('.unit-name').value = unitData.name;
         blockElement.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate;
@@ -174,6 +185,25 @@ document.addEventListener('DOMContentLoaded', () => {
         container.appendChild(blockElement);
     }
     
+    function updateUnitStepRateDisplaysForBanner(unitsToUpdate, allStepsInBanner) {
+        if (!activeBannerContent.querySelector('.banner-data-container')) return;
+        const currentBanner = findBannerById(activeBannerId);
+        if(!currentBanner) return;
+
+        unitsToUpdate.forEach(unitData => {
+            const unitBlockDOM = activeBannerContent.querySelector(`.unit-block[data-unit-id="${unitData.id}"]`);
+            if (unitBlockDOM) {
+                const ratesContainer = unitBlockDOM.querySelector('.unit-steps-rates-container');
+                ratesContainer.innerHTML = ''; 
+                allStepsInBanner.forEach((step, index) => {
+                    const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
+                    addUnitStepRateEntryToUnit(unitBlockDOM, step, index, override, unitData.universalBaseRate);
+                });
+            }
+        });
+        updateStepNumbersAndDisplays(); 
+    }
+
     // --- CUSTOM ANALYSIS GROUP MANAGEMENT (within active banner) ---
     function createNewAnalysisTargetForActiveBanner(analysisDataToLoad = null) {
         const currentBanner = findBannerById(activeBannerId);
@@ -187,6 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
             constituents: [] 
         };
         if (!analysisDataToLoad) currentBanner.customAnalyses.push(newAnalysisData);
+        else if (!currentBanner.customAnalyses.find(a => a.id === newAnalysisId)) currentBanner.customAnalyses.push(newAnalysisData);
+
 
         const container = activeBannerContent.querySelector('.analysis-targets-container');
         if(container) renderAnalysisTarget(container, newAnalysisData, currentBanner.units);
@@ -194,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderAnalysisTarget(container, analysisData, unitsInBanner) {
         const instance = analysisTargetTemplate.content.cloneNode(true);
-        const blockElement = instance.firstElementChild; // Get <div class="analysis-target-block item-block">
+        const blockElement = instance.firstElementChild; 
         blockElement.dataset.analysisId = analysisData.id;
         blockElement.querySelector('.analysis-name').value = analysisData.name;
         const constituentsContainer = blockElement.querySelector('.constituent-units-container');
@@ -214,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const newConstituentId = generateUniqueId('constituent');
         const newConstituentData = { id: newConstituentId, unitId: null, multiplier: 1 };
-        if (currentBanner.units.length > 0) newConstituentData.unitId = currentBanner.units[0].id; // Default
+        if (currentBanner.units.length > 0) newConstituentData.unitId = currentBanner.units[0].id; 
         analysisInModel.constituents.push(newConstituentData);
 
         const container = parentAnalysisBlockDOM.querySelector('.constituent-units-container');
@@ -223,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function renderConstituentUnit(container, constituentData, unitsInBanner, parentAnalysisId) {
         const instance = constituentUnitTemplate.content.cloneNode(true);
-        const entryElement = instance.firstElementChild; // Get <div class="constituent-unit-entry...">
+        const entryElement = instance.firstElementChild; 
         entryElement.dataset.constituentId = constituentData.id;
         entryElement.dataset.parentAnalysisId = parentAnalysisId;
 
@@ -231,13 +263,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const multiplierInput = entryElement.querySelector('.constituent-unit-multiplier');
 
         populateUnitDropdownForAnalysis(unitSelect, unitsInBanner, constituentData.unitId);
-        // Sync model with UI state immediately, especially if a default was chosen
         constituentData.unitId = unitSelect.value; 
         multiplierInput.value = constituentData.multiplier;
         container.appendChild(entryElement);
     }
 
-    function populateUnitDropdownForAnalysis(selectElement, unitsInBanner, desiredValue = null) { /* ... as before ... */
+    function populateUnitDropdownForAnalysis(selectElement, unitsInBanner, desiredValue = null) {
         const originalValueBeforeRepopulate = selectElement.value;
         selectElement.innerHTML = ''; 
         if (!unitsInBanner || unitsInBanner.length === 0) {
@@ -257,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function updateAllAnalysisConstituentUnitDropdowns() { /* ... as before, ensures model is updated ... */
+    function updateAllAnalysisConstituentUnitDropdowns() {
         const currentBanner = findBannerById(activeBannerId);
         if (!currentBanner || !activeBannerContent.querySelector('.banner-data-container')) return;
         activeBannerContent.querySelectorAll('.analysis-target-block').forEach(analysisBlock => {
@@ -287,20 +318,20 @@ document.addEventListener('DOMContentLoaded', () => {
             id: bannerId, name: bannerName, totalMultis: 30,
             steps: [], units: [], customAnalyses: []
         };
-        // Ensure all IDs are present when loading
         if (bannerToLoad) {
             newBannerData.steps.forEach(s => s.id = s.id || generateUniqueId('step'));
             newBannerData.units.forEach(u => u.id = u.id || generateUniqueId('unit'));
-            newBannerData.customAnalyses.forEach(a => {
-                a.id = a.id || generateUniqueId('analysis');
-                if(a.constituents) a.constituents.forEach(c => c.id = c.id || generateUniqueId('constituent'));
-            });
+            newBannerData.customAnalyses = (newBannerData.customAnalyses || []).map(a => ({
+                ...a,
+                id: a.id || generateUniqueId('analysis'),
+                constituents: (a.constituents || []).map(c => ({ ...c, id: c.id || generateUniqueId('constituent') }))
+            }));
         }
 
         banners.push(newBannerData);
         renderBannerTabs();
 
-        if (!bannerToLoad) {
+        if (!bannerToLoad) { 
             const defaultStep = { id: generateUniqueId('step'), appliesToMultis: [], gemCost: 50 };
             newBannerData.steps.push(defaultStep);
             globalDefaultUnitNameCounter++;
@@ -330,14 +361,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         activeBannerContent.innerHTML = ''; 
         const bannerInstance = bannerContentTemplate.content.cloneNode(true);
-        const dataContainer = bannerInstance.firstElementChild; // Get the <div class="banner-data-container">
+        const dataContainer = bannerInstance.firstElementChild; 
         dataContainer.dataset.bannerId = bannerData.id; 
 
         dataContainer.querySelector('.total-multis-input').value = bannerData.totalMultis;
         
         const stepsContainer = dataContainer.querySelector('.steps-definition-container');
         stepsContainer.innerHTML = ''; 
-        bannerData.steps.forEach(step => renderStepDefinition(stepsContainer, step, bannerData.units));
+        bannerData.steps.forEach(step => renderStepDefinition(stepsContainer, step));
 
         const unitsContainerElement = dataContainer.querySelector('.units-container');
         unitsContainerElement.innerHTML = '';
@@ -345,16 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const analysesContainer = dataContainer.querySelector('.analysis-targets-container');
         analysesContainer.innerHTML = '';
-        if (bannerData.customAnalyses) { // Ensure customAnalyses exists
+        if (bannerData.customAnalyses) {
             bannerData.customAnalyses.forEach(analysis => renderAnalysisTarget(analysesContainer, analysis, bannerData.units));
         } else {
-            bannerData.customAnalyses = []; // Initialize if missing
+            bannerData.customAnalyses = []; 
         }
         activeBannerContent.appendChild(dataContainer);
-        updateStepNumbersAndDisplays(); // Crucial after rendering all steps
+        updateStepNumbersAndDisplays(); 
     }
 
-    function deleteActiveBanner() { /* ... as before ... */ 
+    function deleteActiveBanner() {
         if (!activeBannerId || banners.length <= 1) { alert("Cannot delete the last banner."); return; }
         const bannerToDelete = findBannerById(activeBannerId);
         if (!confirm(`Delete banner "${bannerToDelete.name}"?`)) return;
@@ -364,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (activeBannerId) setActiveBanner(activeBannerId);
         else activeBannerContent.innerHTML = '<p>No active banner.</p>';
     }
-    function renameActiveBanner() { /* ... as before ... */ 
+    function renameActiveBanner() { 
         if (!activeBannerId) return;
         const newName = renameBannerInput.value.trim();
         if (!newName) { alert("Banner name cannot be empty."); return; }
@@ -372,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (banner) { banner.name = newName; renderBannerTabs(); }
     }
     function findBannerById(id) { return banners.find(b => b.id === id); }
-    function renderBannerTabs() { /* ... as before ... */ 
+    function renderBannerTabs() { 
         bannerTabsContainer.innerHTML = '';
         banners.forEach(banner => {
             const tab = document.createElement('div');
@@ -385,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- EVENT HANDLERS (Main buttons and delegated ones) ---
-    addBannerBtn.addEventListener('click', () => addBanner(null)); // Pass null for new banner
+    addBannerBtn.addEventListener('click', () => addBanner(null)); 
     renameBannerBtn.addEventListener('click', renameActiveBanner);
     deleteBannerBtn.addEventListener('click', deleteActiveBanner);
 
@@ -399,28 +430,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const stepId = stepBlock.dataset.stepId;
             currentBanner.steps = currentBanner.steps.filter(s => s.id !== stepId);
             currentBanner.units.forEach(u => u.stepOverrides = u.stepOverrides.filter(so => so.globalStepDefId !== stepId));
-            stepBlock.remove(); // Remove the item-block itself
+            stepBlock.remove(); 
             updateUnitStepRateDisplaysForBanner(currentBanner.units, currentBanner.steps);
             updateStepNumbersAndDisplays();
         }
         if (e.target.matches('.add-unit-btn')) createNewUnitForActiveBanner(null);
-        if (e.target.matches('.unit-block .remove-item-btn')) { /* ... (updated in previousthought, ensure correct element removal) ... */
+        if (e.target.matches('.unit-block .remove-item-btn')) {
             const unitBlock = e.target.closest('.unit-block');
             const unitId = unitBlock.dataset.unitId;
             currentBanner.units = currentBanner.units.filter(u => u.id !== unitId);
             currentBanner.customAnalyses.forEach(analysis => {
                 analysis.constituents = analysis.constituents.filter(c => c.unitId !== unitId);
                  const analysisBlockDOM = activeBannerContent.querySelector(`.analysis-target-block[data-analysis-id="${analysis.id}"]`);
-                if (analysisBlockDOM) { /* ... re-render constituents ... */ 
+                if (analysisBlockDOM) { 
                     const constituentsContainer = analysisBlockDOM.querySelector('.constituent-units-container');
-                    constituentsContainer.innerHTML = ''; // Clear and re-render
+                    constituentsContainer.innerHTML = ''; 
                     analysis.constituents.forEach(c => renderConstituentUnit(constituentsContainer, c, currentBanner.units, analysis.id));
                 }
             });
             unitBlock.remove(); 
             updateAllAnalysisConstituentUnitDropdowns();
         }
-        if (e.target.matches('.unit-block .use-base-rate-btn')) { /* ... as before ... */ 
+        if (e.target.matches('.unit-block .use-base-rate-btn')) { 
              const unitBlock = e.target.closest('.unit-block');
             const unitId = unitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
@@ -432,7 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         if (e.target.matches('.add-analysis-target-btn')) createNewAnalysisTargetForActiveBanner(null);
-        if (e.target.matches('.analysis-target-block .remove-item-btn')) { /* ... as before ... */
+        if (e.target.matches('.analysis-target-block .remove-item-btn')) {
             const analysisBlock = e.target.closest('.analysis-target-block');
             const analysisId = analysisBlock.dataset.analysisId;
             currentBanner.customAnalyses = currentBanner.customAnalyses.filter(a => a.id !== analysisId);
@@ -442,7 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const parentAnalysisBlockDOM = e.target.closest('.analysis-target-block');
             addConstituentUnitToGroupUI(parentAnalysisBlockDOM);
         }
-        if (e.target.matches('.constituent-unit-entry .remove-constituent-btn')) { /* ... as before ... */
+        if (e.target.matches('.constituent-unit-entry .remove-constituent-btn')) {
             const constituentEntry = e.target.closest('.constituent-unit-entry');
             const analysisBlock = e.target.closest('.analysis-target-block');
             const analysisId = analysisBlock.dataset.analysisId;
@@ -455,23 +486,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    activeBannerContent.addEventListener('change', (e) => { /* ... (as before, ensures model updates) ... */ 
+    activeBannerContent.addEventListener('change', (e) => { 
         const currentBanner = findBannerById(activeBannerId);
         if (!currentBanner) return;
         if (e.target.matches('.total-multis-input')) currentBanner.totalMultis = parseInt(e.target.value) || 30;
         const stepBlock = e.target.closest('.step-definition-block');
-        if (stepBlock) { /* ... update currentBanner.steps[stepId] ... */ 
+        if (stepBlock) { 
             const stepId = stepBlock.dataset.stepId;
             const stepData = currentBanner.steps.find(s => s.id === stepId);
             if(stepData){
                 if (e.target.matches('.step-multis')) {
                     stepData.appliesToMultis = e.target.value.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
-                    updateUnitStepRateDisplaysForBanner(currentBanner.units, currentBanner.steps);
+                    updateUnitStepRateDisplaysForBanner(currentBanner.units, currentBanner.steps); 
+                    updateStepNumbersAndDisplays();
                 } else if (e.target.matches('.step-gem-cost')) stepData.gemCost = parseInt(e.target.value) || 50;
             }
         }
         const unitBlock = e.target.closest('.unit-block');
-        if (unitBlock) { /* ... update currentBanner.units[unitId] ... */ 
+        if (unitBlock) { 
             const unitId = unitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
             if(unitData){
@@ -480,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         const unitStepRateEntry = e.target.closest('.unit-step-rate-entry');
-        if (unitStepRateEntry) { /* ... update currentBanner.units[unitId].stepOverrides ... */ 
+        if (unitStepRateEntry) { 
             const parentUnitBlock = e.target.closest('.unit-block');
             const unitId = parentUnitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
@@ -493,13 +525,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         const analysisBlock = e.target.closest('.analysis-target-block');
-        if (analysisBlock) { /* ... update currentBanner.customAnalyses[analysisId].name ... */ 
+        if (analysisBlock) { 
             const analysisId = analysisBlock.dataset.analysisId;
             const analysisData = currentBanner.customAnalyses.find(a => a.id === analysisId);
             if (analysisData && e.target.matches('.analysis-name')) analysisData.name = e.target.value;
         }
         const constituentEntry = e.target.closest('.constituent-unit-entry');
-        if (constituentEntry) { /* ... update currentBanner.customAnalyses[analysisId].constituents[constituentId] ... */ 
+        if (constituentEntry) { 
             const parentAnalysisBlock = e.target.closest('.analysis-target-block');
             const analysisId = parentAnalysisBlock.dataset.analysisId;
             const analysisData = currentBanner.customAnalyses.find(a => a.id === analysisId);
@@ -512,45 +544,94 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- NAMED SAVE/LOAD STATE --- (as before, uses getCurrentState and applyState)
-    function listSavedSetups() { /* ... as before ... */ 
+    // --- NAMED SAVE/LOAD STATE ---
+    function listSavedSetups() {
         loadSetupSelect.innerHTML = '<option value="">-- Select a saved setup --</option>';
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        Object.keys(allSetups).sort().forEach(name => { loadSetupSelect.add(new Option(name, name)); });
-    }
-    saveNamedStateBtn.addEventListener('click', () => { /* ... as before, saves `banners` array ... */ 
-        const name = saveSetupNameInput.value.trim();
-        if (!name) { alert('Please enter a name.'); return; }
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        allSetups[name] = banners; // `banners` should be up-to-date
-        localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
-        alert(`Setup "${name}" saved!`); listSavedSetups(); loadSetupSelect.value = name;
-    });
-    loadNamedStateBtn.addEventListener('click', () => { /* Uses applyState */ 
-        const name = loadSetupSelect.value;
-        if (!name) { alert('Please select a setup.'); return; }
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        const stateToLoad = allSetups[name]; // This is the banners array
-        if (!stateToLoad || !Array.isArray(stateToLoad)) { alert(`Setup "${name}" invalid.`); return; }
-        applyState(stateToLoad); 
-        saveSetupNameInput.value = name; alert(`Setup "${name}" loaded!`);
-    });
-    deleteNamedStateBtn.addEventListener('click', () => { /* ... as before ... */ 
-        const name = loadSetupSelect.value; if (!name) { alert('Select setup.'); return; }
-        if (!confirm(`Delete "${name}"?`)) return;
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        delete allSetups[name]; localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
-        alert(`"${name}" deleted.`); listSavedSetups(); saveSetupNameInput.value = '';
-    });
-    
-    function getCurrentState() { /* Should just return the `banners` array, assuming it's kept in sync */
-        return banners; // Or deep clone: JSON.parse(JSON.stringify(banners));
+        const allSetupsRaw = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        
+        const setupsArray = Object.entries(allSetupsRaw).map(([name, setupObj]) => ({
+            name, // This is the key used in localStorage, which might be user-defined or auto-generated
+            displayName: setupObj.displayName || name, // Use a specific display name if available
+            lastModified: setupObj.lastModified || '1970-01-01T00:00:00.000Z', 
+            data: setupObj.data || setupObj 
+        }));
+
+        setupsArray.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
+
+        setupsArray.forEach(setup => {
+            // The value of the option should be the actual key from localStorage for reliable loading
+            const option = new Option(setup.displayName, setup.name); 
+            loadSetupSelect.add(option);
+        });
     }
 
-    function applyState(bannersToLoad) { // Parameter is the array of banner objects
+    saveNamedStateBtn.addEventListener('click', () => {
+        const name = saveSetupNameInput.value.trim();
+        if (!name) { alert('Please enter a name for the setup.'); return; }
+        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        
+        const currentTimestamp = getCurrentTimestamp();
+        const displayName = `${name} (${new Date(currentTimestamp).toLocaleString()})`;
+
+        allSetups[name] = { // Use the user-entered name as the key
+            displayName: displayName,
+            lastModified: currentTimestamp,
+            data: getCurrentState() 
+        };
+        localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
+        alert(`Setup "${name}" saved!`);
+        listSavedSetups();
+        loadSetupSelect.value = name; 
+    });
+
+    loadNamedStateBtn.addEventListener('click', () => {
+        const nameKey = loadSetupSelect.value; // This is the key from localStorage
+        if (!nameKey) { alert('Please select a setup to load.'); return; }
+        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        const setupToLoad = allSetups[nameKey];
+        
+        if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) { 
+            const bannersData = setupToLoad.data || setupToLoad; 
+            applyState(bannersData);
+            // Pre-fill name for potential re-save, using the original key if possible, or the display name's base
+            saveSetupNameInput.value = nameKey.startsWith("AUTOLOAD_") || nameKey.startsWith("FILEIMPORT_") ? 
+                                        getFilenameWithoutExtension(setupToLoad.originalFilename || nameKey) : nameKey;
+            alert(`Setup "${setupToLoad.displayName || nameKey}" loaded!`);
+        } else {
+            alert(`Could not load setup "${nameKey}". It might be corrupted or in an old format.`);
+        }
+    });
+
+    deleteNamedStateBtn.addEventListener('click', () => {
+        const nameKey = loadSetupSelect.value; 
+        if (!nameKey) { alert('Please select a setup to delete.'); return; }
+        
+        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        const displayNameToDelete = (allSetups[nameKey] && allSetups[nameKey].displayName) ? allSetups[nameKey].displayName : nameKey;
+
+        if (!confirm(`Are you sure you want to delete the setup "${displayNameToDelete}"? This cannot be undone.`)) return;
+        
+        delete allSetups[nameKey];
+        localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
+        alert(`Setup "${displayNameToDelete}" deleted.`);
+        listSavedSetups();
+        saveSetupNameInput.value = '';
+    });
+    
+    function getCurrentState() {
+        return JSON.parse(JSON.stringify(banners)); 
+    }
+
+    function applyState(bannersToLoad) {
         banners = []; activeBannerId = null; activeBannerContent.innerHTML = ''; globalDefaultUnitNameCounter = 0;
         
-        // Create data models first
+        if (!Array.isArray(bannersToLoad)) {
+            console.error("Invalid state to apply: bannersToLoad is not an array.", bannersToLoad);
+            alert("Error: The loaded setup data is invalid.");
+            addBanner(null); 
+            return;
+        }
+
         bannersToLoad.forEach(bannerData => {
             const bannerId = bannerData.id || generateUniqueId('banner');
             const loadedBanner = {
@@ -558,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 name: bannerData.name || `Banner ${banners.length + 1}`,
                 totalMultis: bannerData.totalMultis || 30,
                 steps: (bannerData.steps || []).map(s => ({...s, id: s.id || generateUniqueId('step')}) ),
-                units: (bannerData.units || []).map(u => ({...u, id: u.id || generateUniqueId('unit')}) ),
+                units: (bannerData.units || []).map(u => ({...u, id: u.id || generateUniqueId('unit'), stepOverrides: u.stepOverrides || [] }) ),
                 customAnalyses: (bannerData.customAnalyses || []).map(a => ({
                     ...a, 
                     id: a.id || generateUniqueId('analysis'),
@@ -570,59 +651,240 @@ document.addEventListener('DOMContentLoaded', () => {
 
         renderBannerTabs();
         if (banners.length > 0) {
-            setActiveBanner(banners[0].id); // This will call populateBannerContent
+            setActiveBanner(banners[0].id); 
         } else {
-            activeBannerContent.innerHTML = '<p>Loaded setup is empty or invalid.</p>';
+            addBanner(null);
         }
     }
 
+    // --- JSON IMPORT/EXPORT & SERVER AUTO-LOAD ---
+    async function fetchAndLoadServerSetups() {
+        try {
+            const manifestResponse = await fetch(DEFAULT_SETUPS_MANIFEST_PATH);
+            if (!manifestResponse.ok) {
+                if (manifestResponse.status === 404) {
+                    console.log(`'${DEFAULT_SETUPS_MANIFEST_PATH}' not found. Skipping server auto-load.`);
+                } else {
+                    console.error(`Error fetching '${DEFAULT_SETUPS_MANIFEST_PATH}': ${manifestResponse.statusText}`);
+                }
+                return;
+            }
+            const setupFilenames = await manifestResponse.json();
+            if (!Array.isArray(setupFilenames)) {
+                console.error(`'${DEFAULT_SETUPS_MANIFEST_PATH}' is not a valid JSON array.`);
+                return;
+            }
+
+            const allLocalStorageSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+            let setupsModified = false;
+
+            for (const filename of setupFilenames) {
+                try {
+                    const setupResponse = await fetch(filename);
+                    if (!setupResponse.ok) {
+                        console.warn(`Could not fetch server setup '${filename}': ${setupResponse.statusText}`);
+                        continue;
+                    }
+                    const serverSetup = await setupResponse.json();
+
+                    if (!serverSetup.banners || !Array.isArray(serverSetup.banners) || !serverSetup.lastModified) {
+                        console.warn(`Server setup file '${filename}' has invalid format. Skipping.`);
+                        continue;
+                    }
+                    
+                    const baseFilename = getFilenameWithoutExtension(filename);
+                    const displayName = `${baseFilename} (${new Date(serverSetup.lastModified).toLocaleDateString()})`;
+                    // Use a consistent key for localStorage that includes the filename to avoid clashes
+                    const storageKey = `AUTOLOAD_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+
+                    // Add or update in localStorage
+                    // For simplicity, we'll overwrite if it exists, assuming server files are "defaults"
+                    // A more complex logic could compare timestamps if needed.
+                    allLocalStorageSetups[storageKey] = {
+                        displayName: displayName,
+                        originalFilename: filename, // Store for potential re-save naming
+                        lastModified: serverSetup.lastModified,
+                        data: serverSetup.banners
+                    };
+                    setupsModified = true;
+                    console.log(`Auto-loaded server setup '${filename}' as '${displayName}'.`);
+
+                } catch (fileError) {
+                    console.error(`Error processing server setup file '${filename}':`, fileError);
+                }
+            }
+            if (setupsModified) {
+                localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allLocalStorageSetups));
+            }
+
+        } catch (manifestError) {
+            console.error(`Error fetching or processing '${DEFAULT_SETUPS_MANIFEST_PATH}':`, manifestError);
+        }
+    }
+
+
+    exportJsonBtn.addEventListener('click', () => {
+        const currentSetup = {
+            lastModified: getCurrentTimestamp(),
+            banners: getCurrentState() 
+        };
+        const jsonString = JSON.stringify(currentSetup, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const timestampForFile = currentSetup.lastModified.replace(/[:.]/g, '-');
+        a.href = url;
+        a.download = `sugofest_setup_${timestampForFile}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('Current setup exported to JSON file.');
+    });
+
+    importJsonBtn.addEventListener('click', () => {
+        if (importJsonInput.files.length === 0) {
+            alert('Please select a JSON file to import.');
+            return;
+        }
+        const file = importJsonInput.files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const importedSetup = JSON.parse(event.target.result);
+                if (!importedSetup.banners || !Array.isArray(importedSetup.banners) || !importedSetup.lastModified) {
+                    alert('Invalid JSON format. Expected "banners" array and "lastModified" timestamp.');
+                    return;
+                }
+
+                const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+                
+                const baseFilename = getFilenameWithoutExtension(file.name);
+                const displayName = `${baseFilename} (${new Date(importedSetup.lastModified).toLocaleString()})`;
+                // Create a unique key for localStorage to avoid overwriting user-saved setups with same base name
+                let storageKey = `FILEIMPORT_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+                let counter = 1;
+                const originalStorageKey = storageKey;
+                while(allSetups[`${storageKey}${counter > 1 ? '_'+counter : ''}`]) {
+                    counter++;
+                }
+                storageKey = `${storageKey}${counter > 1 ? '_'+counter : ''}`;
+
+
+                allSetups[storageKey] = {
+                    displayName: displayName,
+                    originalFilename: file.name, // Store original filename
+                    lastModified: importedSetup.lastModified, 
+                    data: importedSetup.banners
+                };
+                localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
+                
+                applyState(importedSetup.banners); 
+                saveSetupNameInput.value = baseFilename; // Suggest original filename for saving
+                listSavedSetups(); 
+                loadSetupSelect.value = storageKey; 
+
+                alert(`Setup from "${file.name}" imported as "${displayName}" and loaded.`);
+            } catch (error) {
+                console.error('Error importing JSON:', error);
+                alert(`Error importing JSON: ${error.message}`);
+            } finally {
+                importJsonInput.value = ''; 
+            }
+        };
+        reader.readAsText(file);
+    });
+
     // --- DATA COLLECTION FOR RESULTS PAGE ---
-    calculateBtnLink.addEventListener('click', () => { /* ... as before ... */ 
+    calculateBtnLink.addEventListener('click', (e) => { 
         const dataForAllBanners = banners.map(bannerData => {
             const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
-            const customGroupAnalyses = bannerData.customAnalyses.map(cg => ({
+            const customGroupAnalyses = (bannerData.customAnalyses || []).map(cg => ({
                 bannerName: bannerData.name, name: cg.name, type: "custom_group", 
-                constituents: cg.constituents.filter(c => c.unitId) 
-            })).filter(cg => cg.constituents.length > 0);
+                constituents: (cg.constituents || []).filter(c => c.unitId) 
+            })).filter(cg => cg.constituents && cg.constituents.length > 0);
             return {
                 bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
                 units: bannerData.units, stepDefinitions: bannerData.steps, 
                 analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
             };
         }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
-        if (dataForAllBanners.length === 0) { alert("No units/analyses defined."); return; }
-        localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(banners)); 
+
+        if (dataForAllBanners.length === 0) { 
+            alert("No units or custom analysis groups are defined in any banner. Please add some to proceed."); 
+            e.preventDefault(); 
+            return; 
+        }
+        
+        const lastCalculatedSetup = {
+            lastModified: getCurrentTimestamp(),
+            data: getCurrentState() 
+        };
+        localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(lastCalculatedSetup)); 
         localStorage.setItem('sugofestCalcSetup', JSON.stringify({ allBannerData: dataForAllBanners }));
     });
 
     // --- AUTO-LOAD & INITIALIZATION ---
-    function autoLoadLastCalculatedState() { /* Uses applyState */ 
+    async function initializePage() {
+        await fetchAndLoadServerSetups(); // Load server-defined setups first
+        listSavedSetups(); // Populate and sort the dropdown (now includes server setups)
+
         const urlParams = new URLSearchParams(window.location.search);
+        let stateLoaded = false;
+
         if (urlParams.has('autoLoadLast')) {
             const lastStateJSON = localStorage.getItem(LAST_CALCULATED_STATE_KEY);
             if (lastStateJSON) {
                 try {
-                    const stateToLoad = JSON.parse(lastStateJSON); // This is the `banners` array
-                    if (Array.isArray(stateToLoad)) { // No need for stateToLoad.length > 0 check here, applyState handles empty
-                        applyState(stateToLoad); // applyState will clear current and load
-                        console.log("Auto-loaded last calculated state.");
-                         if (window.history.replaceState) { /* ... clean URL ... */ 
+                    const stateToLoad = JSON.parse(lastStateJSON);
+                    if (stateToLoad && stateToLoad.data && Array.isArray(stateToLoad.data)) {
+                        applyState(stateToLoad.data);
+                        console.log("Auto-loaded last calculated state (due to query param).");
+                        if (window.history.replaceState) {
                             const cleanURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
                             window.history.replaceState({ path: cleanURL }, '', cleanURL);
-                         }
-                        return true; // Indicates state was loaded
+                        }
+                        stateLoaded = true;
                     }
                 } catch (e) { console.error("Error parsing auto-load state:", e); }
             }
         }
-        return false; // No state loaded
-    }
 
-    listSavedSetups(); 
-    const loaded = autoLoadLastCalculatedState(); 
-    if (!loaded && banners.length === 0) { 
-        addBanner(null); // Add one default banner if nothing loaded and banners array is empty
-    } else if (banners.length > 0 && !activeBannerId) { // Should be handled by applyState or addBanner
-        setActiveBanner(banners[0].id);
+        if (!stateLoaded && loadSetupSelect.options.length > 1) { 
+            const firstSetupKey = loadSetupSelect.options[1].value; // The key of the first actual setup (newest)
+            const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+            const setupToLoad = allSetups[firstSetupKey];
+
+            if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) {
+                applyState(setupToLoad.data || setupToLoad);
+                saveSetupNameInput.value = firstSetupKey.startsWith("AUTOLOAD_") || firstSetupKey.startsWith("FILEIMPORT_") ? 
+                                            getFilenameWithoutExtension(setupToLoad.originalFilename || firstSetupKey) : firstSetupKey;
+                loadSetupSelect.value = firstSetupKey;
+                console.log(`Auto-loaded most recent setup: "${setupToLoad.displayName || firstSetupKey}"`);
+                stateLoaded = true;
+            }
+        }
+        
+        if (!stateLoaded) { 
+             const lastCalculatedStateJSON = localStorage.getItem(LAST_CALCULATED_STATE_KEY);
+             if (lastCalculatedStateJSON) {
+                 try {
+                     const stateToLoad = JSON.parse(lastCalculatedStateJSON);
+                     if (stateToLoad && stateToLoad.data && Array.isArray(stateToLoad.data)) {
+                         applyState(stateToLoad.data);
+                         console.log("Loaded from last calculated state (fallback).");
+                         stateLoaded = true;
+                     }
+                 } catch (e) { console.error("Error parsing last calculated state (fallback):", e); }
+             }
+        }
+
+        if (!stateLoaded) { 
+            console.log("No saved state found, initializing with a default banner.");
+            addBanner(null);
+        }
     }
+    
+    initializePage();
 });
