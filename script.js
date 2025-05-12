@@ -7,7 +7,9 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
     const renameBannerBtn = document.getElementById('renameBannerBtn');
     const deleteBannerBtn = document.getElementById('deleteBannerBtn');
     
-    const calculateBtnLink = document.getElementById('calculateBtnLink');
+    // const calculateBtnLink = document.getElementById('calculateBtnLink'); // OLD: For single button
+    const calculateBtnLinks = document.querySelectorAll('.proceed-button'); // NEW: Selects all proceed buttons by class
+
     const saveSetupNameInput = document.getElementById('saveSetupName');
     const saveNamedStateBtn = document.getElementById('saveNamedStateBtn');
     const loadSetupSelect = document.getElementById('loadSetupSelect');
@@ -550,8 +552,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         const allSetupsRaw = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
         
         const setupsArray = Object.entries(allSetupsRaw).map(([name, setupObj]) => ({
-            name, // This is the key used in localStorage, which might be user-defined or auto-generated
-            displayName: setupObj.displayName || name, // Use a specific display name if available
+            name, 
+            displayName: setupObj.displayName || name, 
             lastModified: setupObj.lastModified || '1970-01-01T00:00:00.000Z', 
             data: setupObj.data || setupObj 
         }));
@@ -559,7 +561,6 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         setupsArray.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
 
         setupsArray.forEach(setup => {
-            // The value of the option should be the actual key from localStorage for reliable loading
             const option = new Option(setup.displayName, setup.name); 
             loadSetupSelect.add(option);
         });
@@ -573,7 +574,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         const currentTimestamp = getCurrentTimestamp();
         const displayName = `${name} (${new Date(currentTimestamp).toLocaleString()})`;
 
-        allSetups[name] = { // Use the user-entered name as the key
+        allSetups[name] = { 
             displayName: displayName,
             lastModified: currentTimestamp,
             data: getCurrentState() 
@@ -585,7 +586,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
     });
 
     loadNamedStateBtn.addEventListener('click', () => {
-        const nameKey = loadSetupSelect.value; // This is the key from localStorage
+        const nameKey = loadSetupSelect.value; 
         if (!nameKey) { alert('Please select a setup to load.'); return; }
         const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
         const setupToLoad = allSetups[nameKey];
@@ -593,7 +594,6 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) { 
             const bannersData = setupToLoad.data || setupToLoad; 
             applyState(bannersData);
-            // Pre-fill name for potential re-save, using the original key if possible, or the display name's base
             saveSetupNameInput.value = nameKey.startsWith("AUTOLOAD_") || nameKey.startsWith("FILEIMPORT_") ? 
                                         getFilenameWithoutExtension(setupToLoad.originalFilename || nameKey) : nameKey;
             alert(`Setup "${setupToLoad.displayName || nameKey}" loaded!`);
@@ -694,16 +694,11 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                     
                     const baseFilename = getFilenameWithoutExtension(filename);
                     const displayName = `${baseFilename} (${new Date(serverSetup.lastModified).toLocaleDateString()})`;
-                    // Use a consistent key for localStorage that includes the filename to avoid clashes
                     const storageKey = `AUTOLOAD_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
-
-                    // Add or update in localStorage
-                    // For simplicity, we'll overwrite if it exists, assuming server files are "defaults"
-                    // A more complex logic could compare timestamps if needed.
                     allLocalStorageSetups[storageKey] = {
                         displayName: displayName,
-                        originalFilename: filename, // Store for potential re-save naming
+                        originalFilename: filename, 
                         lastModified: serverSetup.lastModified,
                         data: serverSetup.banners
                     };
@@ -762,7 +757,6 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                 
                 const baseFilename = getFilenameWithoutExtension(file.name);
                 const displayName = `${baseFilename} (${new Date(importedSetup.lastModified).toLocaleString()})`;
-                // Create a unique key for localStorage to avoid overwriting user-saved setups with same base name
                 let storageKey = `FILEIMPORT_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
                 let counter = 1;
                 const originalStorageKey = storageKey;
@@ -774,14 +768,14 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
 
                 allSetups[storageKey] = {
                     displayName: displayName,
-                    originalFilename: file.name, // Store original filename
+                    originalFilename: file.name, 
                     lastModified: importedSetup.lastModified, 
                     data: importedSetup.banners
                 };
                 localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
                 
                 applyState(importedSetup.banners); 
-                saveSetupNameInput.value = baseFilename; // Suggest original filename for saving
+                saveSetupNameInput.value = baseFilename; 
                 listSavedSetups(); 
                 loadSetupSelect.value = storageKey; 
 
@@ -796,39 +790,42 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         reader.readAsText(file);
     });
 
-    // --- DATA COLLECTION FOR RESULTS PAGE ---
-    calculateBtnLink.addEventListener('click', (e) => { 
-        const dataForAllBanners = banners.map(bannerData => {
-            const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
-            const customGroupAnalyses = (bannerData.customAnalyses || []).map(cg => ({
-                bannerName: bannerData.name, name: cg.name, type: "custom_group", 
-                constituents: (cg.constituents || []).filter(c => c.unitId) 
-            })).filter(cg => cg.constituents && cg.constituents.length > 0);
-            return {
-                bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
-                units: bannerData.units, stepDefinitions: bannerData.steps, 
-                analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
-            };
-        }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
+    // --- DATA COLLECTION FOR RESULTS PAGE (Attached to both .proceed-button elements) ---
+    calculateBtnLinks.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const dataForAllBanners = banners.map(bannerData => {
+                const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
+                const customGroupAnalyses = (bannerData.customAnalyses || []).map(cg => ({
+                    bannerName: bannerData.name, name: cg.name, type: "custom_group", 
+                    constituents: (cg.constituents || []).filter(c => c.unitId) 
+                })).filter(cg => cg.constituents && cg.constituents.length > 0);
+                return {
+                    bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
+                    units: bannerData.units, stepDefinitions: bannerData.steps, 
+                    analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
+                };
+            }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
 
-        if (dataForAllBanners.length === 0) { 
-            alert("No units or custom analysis groups are defined in any banner. Please add some to proceed."); 
-            e.preventDefault(); 
-            return; 
-        }
-        
-        const lastCalculatedSetup = {
-            lastModified: getCurrentTimestamp(),
-            data: getCurrentState() 
-        };
-        localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(lastCalculatedSetup)); 
-        localStorage.setItem('sugofestCalcSetup', JSON.stringify({ allBannerData: dataForAllBanners }));
+            if (dataForAllBanners.length === 0) { 
+                alert("No units or custom analysis groups are defined in any banner. Please add some to proceed."); 
+                e.preventDefault(); // Prevent navigation
+                return; 
+            }
+            
+            const lastCalculatedSetup = {
+                lastModified: getCurrentTimestamp(),
+                data: getCurrentState() 
+            };
+            localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(lastCalculatedSetup)); 
+            localStorage.setItem('sugofestCalcSetup', JSON.stringify({ allBannerData: dataForAllBanners }));
+        });
     });
+
 
     // --- AUTO-LOAD & INITIALIZATION ---
     async function initializePage() {
-        await fetchAndLoadServerSetups(); // Load server-defined setups first
-        listSavedSetups(); // Populate and sort the dropdown (now includes server setups)
+        await fetchAndLoadServerSetups(); 
+        listSavedSetups(); 
 
         const urlParams = new URLSearchParams(window.location.search);
         let stateLoaded = false;
@@ -852,7 +849,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         }
 
         if (!stateLoaded && loadSetupSelect.options.length > 1) { 
-            const firstSetupKey = loadSetupSelect.options[1].value; // The key of the first actual setup (newest)
+            const firstSetupKey = loadSetupSelect.options[1].value; 
             const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
             const setupToLoad = allSetups[firstSetupKey];
 

@@ -66,7 +66,7 @@ hr {
     color: white;
     border: none;
     padding: 10px 18px;
-    margin-top: 10px;
+    margin-top: 10px; /* Default margin, can be overridden */
     border-radius: 5px;
     cursor: pointer;
     text-decoration: none;
@@ -83,12 +83,30 @@ hr {
 
 .proceed-button {
     background-color: #28a745 !important; 
-    display: block !important;
-    width: fit-content; /* Auto width */
-    margin: 20px auto;
+    display: block !important; /* Make it block to allow auto margins for centering */
+    width: fit-content; /* Auto width based on content */
+    margin: 20px auto; /* Center block elements and add top/bottom margin */
     font-size: 1.1em;
     padding: 12px 25px;
 }
+
+/* START: Style for the top proceed button's container */
+.proceed-button-top-container {
+    width: 100%; /* Ensure the container takes full width to allow centering of its content */
+    text-align: center; /* Center the inline-block <a> tag within this div */
+    margin-top: 15px; /* Add some space above the button */
+    margin-bottom: 5px; /* Reduce bottom margin if hr is close */
+}
+/* Adjust the top proceed button itself if needed (it inherits from .proceed-button) */
+/* For example, if you want its margin different from the bottom one: */
+.proceed-button-top-container .proceed-button {
+     margin-top: 0; /* Remove its own top margin if container handles it */
+     margin-bottom: 0; /* Remove its own bottom margin if container handles it */
+     /* display: inline-block !important; /* If you want it to behave as inline-block for some reason */
+     /* width: auto !important; /* if you used fit-content and want to revert for this specific one */
+}
+/* END: Style for the top proceed button's container */
+
 
 .remove-button {
     background-color: #dc3545 !important; 
@@ -97,7 +115,7 @@ hr {
     background-color: #e67e88 !important; 
     padding: 4px 8px !important;
     font-size: 0.8em !important;
-    min-width: 30px; /* Ensure 'X' buttons have some width */
+    min-width: 30px; 
 }
 
 
@@ -159,15 +177,15 @@ label {
     display: flex;
     align-items: center;
     justify-content: space-between; 
-    gap: 10px; /* Reduced gap */
+    gap: 10px; 
     flex-wrap: wrap;
     margin-bottom: 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid #eee;
 }
-.item-header h4 { margin: 0; font-size: 1.1em; } /* Smaller step header */
+.item-header h4 { margin: 0; font-size: 1.1em; } 
 .item-header input[type="text"] { flex-grow: 1; margin-right: 5px;} 
-.item-header label { margin-bottom: 0; white-space: nowrap;} /* Univ. base rate label */
+.item-header label { margin-bottom: 0; white-space: nowrap;} 
 .item-header button { margin-left: 5px; }
 
 
@@ -197,7 +215,7 @@ label {
 .banner-tabs {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: -1px; /* Overlap with active banner content border */
+    margin-bottom: -1px; 
 }
 .banner-tab {
     padding: 10px 15px;
@@ -211,7 +229,7 @@ label {
 }
 .banner-tab.active {
     background-color: #fff;
-    border-bottom: 1px solid #fff; /* Make it look connected to content */
+    border-bottom: 1px solid #fff; 
     color: #007bff;
     font-weight: bold;
 }
@@ -223,7 +241,7 @@ label {
     border: 1px solid #ddd;
     padding: 20px;
     background-color: #fff;
-    border-top-right-radius: 6px; /* If first tab is not active */
+    border-top-right-radius: 6px; 
      border-bottom-left-radius: 6px;
      border-bottom-right-radius: 6px;
 }
