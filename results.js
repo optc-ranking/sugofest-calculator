@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadDetailCsvBtn = document.getElementById('downloadDetailCsvBtn');
     const downloadGraphCsvBtn = document.getElementById('downloadGraphCsvBtn');
 
-    // MODIFICATION: Update back link to trigger auto-load on index.html
     if (backToEntryLink) {
         backToEntryLink.href = "index.html?autoLoadLast=true";
     }
@@ -36,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
     ];
     const MAX_MULTIS_FOR_CSV = 200;
-    const PROBABILITY_THRESHOLD_FOR_100_PERCENT = 0.9999; // If cumulative P(pull) > this, treat as 100%
+    const PROBABILITY_THRESHOLD_FOR_100_PERCENT = 0.9999;
 
     function getNextColor(analysisFullName) { 
         if (!assignedColors[analysisFullName]) {
@@ -106,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totalGemsSpentCurrent += costMK;
             
             const probNotPullRawThisMulti = Math.pow(1 - effBr, 10) * (1 - effFpr);
-            const probPullRawThisMulti = 1 - probNotPullRawThisMulti;
+            const probPullRawThisMulti = 1 - probNotPullRawThisMulti; // Probability of success on this multi
             
             const probSuccessFirstTimeThisMulti = cumulativeProbNotPullCurrent * probPullRawThisMulti;
             
@@ -139,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 multi: k, 
                 probPullAtLeastOne: 1 - cumulativeProbNotPullCurrent, 
                 normalizedRate: normRate * 100,
+                probSuccessOnThisMultiOnly: probPullRawThisMulti * 100 // Store as percentage
             });
         }
 
@@ -324,8 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let yAxisConfiguredMax; 
 
-        // --- START OF UPDATED Y-AXIS LOGIC ---
-        if (selectedRateTypeKey === 'normalizedRate') {
+        if (selectedRateTypeKey === 'normalizedRate' || selectedRateTypeKey === 'probSuccessOnThisMultiOnly') {
             let maxDataValue = 0; 
             let maxNonExtremeDataValue = 0; 
             let hasAnyNonExtremeValue = false;
@@ -334,10 +333,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resultObj = allCalculatedResults.find(r => r.fullAnalysisName === fullName);
                 if (resultObj && resultObj.data) {
                     resultObj.data.forEach(d => {
-                        const rate = d.normalizedRate;
+                        const rate = d[selectedRateTypeKey]; // Use the selected key directly
                         maxDataValue = Math.max(maxDataValue, rate);
         
-                        if (rate > 0.001 && rate < 99.999) { // Consider rates effectively >0 and <100
+                        if (rate > 0.001 && rate < 99.999) { 
                             maxNonExtremeDataValue = Math.max(maxNonExtremeDataValue, rate);
                             hasAnyNonExtremeValue = true;
                         }
@@ -381,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (selectedRateTypeKey === 'probPullAtLeastOne') {
             yAxisConfiguredMax = 100; 
         }
-        // --- END OF UPDATED Y-AXIS LOGIC ---
 
 
         selectedFullAnalysisNames.forEach(analysisName => { 
@@ -391,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     label: resultObj.fullAnalysisName, 
                     data: resultObj.data.map(d => ({ 
                         x: d.multi, 
-                        y: (selectedRateTypeKey === 'probPullAtLeastOne' ? d[selectedRateTypeKey] * 100 : d[selectedRateTypeKey]) 
+                        y: selectedRateTypeKey === 'probPullAtLeastOne' ? d.probPullAtLeastOne * 100 : d[selectedRateTypeKey]
                     })),
                     fill: false, borderColor: resultObj.color, backgroundColor: resultObj.color, 
                     tension: 0.1, borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 4.5
@@ -425,12 +423,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         max: yAxisConfiguredMax, 
                         ticks: {
                             callback: function(value) { 
-                                // Dynamic precision for y-axis ticks based on the configured max
                                 let precision = 0;
-                                if (yAxisConfiguredMax <= 0.5) precision = 2; // e.g. 0.05, 0.10
-                                else if (yAxisConfiguredMax <= 2) precision = 2; // e.g. 0.25, 0.50, 1.25
-                                else if (yAxisConfiguredMax <= 5) precision = 1; // e.g. 0.5, 1.0, 3.5
-                                else if (yAxisConfiguredMax <= 10 && yAxisConfiguredMax % 1 !== 0) precision = 1; // e.g. 7.5 if max is 7.5
+                                if (yAxisConfiguredMax <= 0.5) precision = 2; 
+                                else if (yAxisConfiguredMax <= 2) precision = 2; 
+                                else if (yAxisConfiguredMax <= 5) precision = 1; 
+                                else if (yAxisConfiguredMax <= 10 && yAxisConfiguredMax % 1 !== 0) precision = 1; 
                                 return value.toFixed(precision) + '%'; 
                             },
                             font: {size: 12}
@@ -496,7 +493,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } else { 
                 csvContent += [resultObj.fullAnalysisName, ...Array(xAxisMaxMultisForGraphCsv).fill("")].map(escapeCsvCell).join(",") + "\n";
             }
-            const normRateRow = ["Normalized Rate (%)"], cumPullRow = ["Cumulative Pull Chance (%)"];
+            const normRateRow = ["Normalized Rate (%)"];
+            const cumPullRow = ["Cumulative Pull Chance (%)"];
+            const singleMultiSuccessRow = ["Success Chance on This Multi (%)"]; // New CSV row
+
             const dataByMulti = new Map();
             resultObj.data.forEach(d => dataByMulti.set(d.multi, d));
             for (let i = 1; i <= xAxisMaxMultisForGraphCsv; i++) {
@@ -504,12 +504,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dataPoint) {
                     normRateRow.push(dataPoint.normalizedRate.toFixed(3));
                     cumPullRow.push((dataPoint.probPullAtLeastOne * 100).toFixed(3));
+                    singleMultiSuccessRow.push(dataPoint.probSuccessOnThisMultiOnly.toFixed(3)); // Add data
                 } else { 
-                    normRateRow.push(""); cumPullRow.push("");
+                    normRateRow.push(""); 
+                    cumPullRow.push("");
+                    singleMultiSuccessRow.push(""); // Add empty cell
                 }
             }
             csvContent += normRateRow.map(escapeCsvCell).join(",") + "\n";
             csvContent += cumPullRow.map(escapeCsvCell).join(",") + "\n";
+            csvContent += singleMultiSuccessRow.map(escapeCsvCell).join(",") + "\n"; // Add row to CSV
             csvContent += "\n"; 
         });
         triggerCsvDownload(csvContent, "sugofest_graph_data.csv");
@@ -539,6 +543,7 @@ function getYAxisLabel(rateTypeKey) {
     switch(rateTypeKey) {
         case "normalizedRate": return "Normalized Rate (%)";
         case "probPullAtLeastOne": return "Cumulative Pull Chance (%)";
+        case "probSuccessOnThisMultiOnly": return "Success Chance on This Multi (%)";
         default: return "Value (%)";
     }
 }
