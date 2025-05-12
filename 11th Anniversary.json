@@ -1,5 +1,5 @@
 {
-  "lastModified": "2025-05-12T21:02:03.973Z",
+  "lastModified": "2025-05-12T22:21:24.462Z",
   "banners": [
     {
       "id": "banner-1747024805022-0yz7x4xbq",
@@ -117,15 +117,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747024805022-pow8yf7cg",
-              "finalPosterRate": "0.5"
+              "finalPosterRate": "0.5",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747024840290-9ss17h0hw",
-              "finalPosterRate": "1.111"
+              "finalPosterRate": "1.111",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081747001-kgedpxzoo",
-              "finalPosterRate": "3.333"
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081765095-4lwgsy1l0",
@@ -134,7 +137,8 @@
             },
             {
               "globalStepDefId": "step-1747081772454-xhrms23yo",
-              "finalPosterRate": "5"
+              "finalPosterRate": "5",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081781798-eslpge449",
@@ -155,15 +159,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747024805022-pow8yf7cg",
-              "finalPosterRate": "0.5"
+              "finalPosterRate": "0.5",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747024840290-9ss17h0hw",
-              "finalPosterRate": "1.111"
+              "finalPosterRate": "1.111",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081747001-kgedpxzoo",
-              "finalPosterRate": "3.333"
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081765095-4lwgsy1l0",
@@ -172,11 +179,13 @@
             },
             {
               "globalStepDefId": "step-1747081772454-xhrms23yo",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081781798-eslpge449",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.167"
             },
             {
               "globalStepDefId": "step-1747081776332-61zvmqe5j",
@@ -192,15 +201,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747024805022-pow8yf7cg",
-              "finalPosterRate": "0.9"
+              "finalPosterRate": "0.9",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747024840290-9ss17h0hw",
-              "finalPosterRate": "2"
+              "finalPosterRate": "2",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081747001-kgedpxzoo",
-              "finalPosterRate": "6"
+              "finalPosterRate": "6",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081765095-4lwgsy1l0",
@@ -209,11 +221,13 @@
             },
             {
               "globalStepDefId": "step-1747081772454-xhrms23yo",
-              "finalPosterRate": "5"
+              "finalPosterRate": "5",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081781798-eslpge449",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081776332-61zvmqe5j",
@@ -229,15 +243,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747024805022-pow8yf7cg",
-              "finalPosterRate": "0.9"
+              "finalPosterRate": "0.9",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747024840290-9ss17h0hw",
-              "finalPosterRate": "2"
+              "finalPosterRate": "2",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081747001-kgedpxzoo",
-              "finalPosterRate": "6"
+              "finalPosterRate": "6",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081765095-4lwgsy1l0",
@@ -246,11 +263,13 @@
             },
             {
               "globalStepDefId": "step-1747081772454-xhrms23yo",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081781798-eslpge449",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.3"
             },
             {
               "globalStepDefId": "step-1747081776332-61zvmqe5j",
@@ -266,15 +285,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747024805022-pow8yf7cg",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.022"
             },
             {
               "globalStepDefId": "step-1747024840290-9ss17h0hw",
-              "finalPosterRate": "0.148"
+              "finalPosterRate": "0.148",
+              "baseRate10Pulls": "0.022"
             },
             {
               "globalStepDefId": "step-1747081747001-kgedpxzoo",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.022"
             },
             {
               "globalStepDefId": "step-1747081765095-4lwgsy1l0",
@@ -283,11 +305,13 @@
             },
             {
               "globalStepDefId": "step-1747081772454-xhrms23yo",
-              "finalPosterRate": "2.361"
+              "finalPosterRate": "2.361",
+              "baseRate10Pulls": "0.022"
             },
             {
               "globalStepDefId": "step-1747081781798-eslpge449",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.022"
             },
             {
               "globalStepDefId": "step-1747081776332-61zvmqe5j",
@@ -303,15 +327,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747024805022-pow8yf7cg",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.046"
             },
             {
               "globalStepDefId": "step-1747024840290-9ss17h0hw",
-              "finalPosterRate": "0.304"
+              "finalPosterRate": "0.304",
+              "baseRate10Pulls": "0.046"
             },
             {
               "globalStepDefId": "step-1747081747001-kgedpxzoo",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.046"
             },
             {
               "globalStepDefId": "step-1747081765095-4lwgsy1l0",
@@ -320,11 +347,13 @@
             },
             {
               "globalStepDefId": "step-1747081772454-xhrms23yo",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.046"
             },
             {
               "globalStepDefId": "step-1747081781798-eslpge449",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.046"
             },
             {
               "globalStepDefId": "step-1747081776332-61zvmqe5j",
