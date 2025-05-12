@@ -543,7 +543,7 @@ function getYAxisLabel(rateTypeKey) {
     switch(rateTypeKey) {
         case "normalizedRate": return "Normalized Rate (%)";
         case "probPullAtLeastOne": return "Cumulative Pull Chance (%)";
-        case "probSuccessOnThisMultiOnly": return "Success Chance on This Multi (%)";
+        case "probSuccessOnThisMultiOnly": return "High Value Multis (%)";
         default: return "Value (%)";
     }
 }
