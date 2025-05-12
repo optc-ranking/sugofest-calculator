@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const constituentUnitTemplate = document.getElementById('constituentUnitTemplate');
 
     // --- State ---
-    let banners = []; // Array of banner objects { id, name, totalMultis, steps, units, analyses }
+    let banners = []; 
     let activeBannerId = null;
-    let defaultUnitNameCounter = 0;
+    let globalDefaultUnitNameCounter = 0; // For unique default unit names across all banners if needed
     const SAVED_SETUPS_KEY = 'sugofestMultiBannerSetups';
     const LAST_CALCULATED_STATE_KEY = '__last_calculated_banner_state__';
 
@@ -35,43 +35,282 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    // --- BANNER MANAGEMENT ---
+    // --- STEP & UNIT DISPLAY UPDATES ---
+    function updateStepNumbersAndDisplays() {
+        if (!activeBannerId || !activeBannerContent.querySelector('.banner-data-container')) return;
+
+        const currentBannerStepsContainer = activeBannerContent.querySelector('.steps-definition-container');
+        if (!currentBannerStepsContainer) return;
+
+        const globalStepBlocks = currentBannerStepsContainer.querySelectorAll('.step-definition-block');
+        globalStepBlocks.forEach((gsBlock, index) => {
+            gsBlock.querySelector('.step-number').textContent = index + 1;
+            // gsBlock.dataset.stepDefIndex = index; // Redundant if stepData.id is used
+
+            const currentBannerUnitsContainer = activeBannerContent.querySelector('.units-container');
+            if (!currentBannerUnitsContainer) return;
+            currentBannerUnitsContainer.querySelectorAll('.unit-block').forEach(unitBlock => {
+                // Find step-rate-entry by stepData.id (more robust)
+                const stepDataId = gsBlock.dataset.stepId;
+                const unitStepEntry = unitBlock.querySelector(`.unit-step-rate-entry[data-step-ref-id="${stepDataId}"]`);
+                if (unitStepEntry) {
+                    unitStepEntry.querySelector('.unit-step-number-display').textContent = index + 1;
+                    const multiInputVal = gsBlock.querySelector('.step-multis').value;
+                    unitStepEntry.querySelector('.unit-step-multis-display').textContent = multiInputVal || 'N/A';
+                }
+            });
+        });
+    }
+    
+    // --- UNIT MANAGEMENT ---
+    function createNewUnitForActiveBanner(unitDataToLoad = null) {
+        const currentBanner = findBannerById(activeBannerId);
+        if (!currentBanner) return;
+
+        const newUnitId = unitDataToLoad ? unitDataToLoad.id : generateUniqueId('unit');
+        let unitName;
+        if (unitDataToLoad) {
+            unitName = unitDataToLoad.name;
+        } else {
+            // Ensure unique default names within THIS banner
+            let bannerUnitCounter = currentBanner.units.length + 1;
+            const existingNames = new Set(currentBanner.units.map(u => u.name));
+            do {
+                unitName = `Unit ${bannerUnitCounter}`;
+                bannerUnitCounter++;
+            } while (existingNames.has(unitName));
+        }
+        
+        const newUnitData = unitDataToLoad || {
+            id: newUnitId,
+            name: unitName,
+            universalBaseRate: "0.500",
+            stepOverrides: []
+        };
+        if (!unitDataToLoad) currentBanner.units.push(newUnitData);
+
+        const container = activeBannerContent.querySelector('.units-container');
+        if (container) {
+            renderUnit(container, newUnitData, currentBanner.steps);
+        }
+        updateAllAnalysisConstituentUnitDropdowns();
+    }
+
+    function addUnitStepRateEntryToUnit(unitBlockDOM, stepData, stepVisualIndex, savedOverride, universalRate) {
+        const ratesContainer = unitBlockDOM.querySelector('.unit-steps-rates-container');
+        if (!ratesContainer) { console.error("Rates container not found for unit", unitBlockDOM); return; }
+
+        const entryInstance = unitStepRateTemplate.content.cloneNode(true);
+        const entryElement = entryInstance.firstElementChild; // Get the actual <div class="unit-step-rate-entry...">
+        entryElement.dataset.stepRefId = stepData.id; 
+        entryElement.querySelector('.unit-step-number-display').textContent = stepVisualIndex + 1;
+        entryElement.querySelector('.unit-step-multis-display').textContent = (Array.isArray(stepData.appliesToMultis) ? stepData.appliesToMultis.join(',') : '') || 'N/A';
+        
+        const baseRateInput = entryElement.querySelector('.unit-step-base-rate');
+        const finalPosterRateInput = entryElement.querySelector('.unit-step-final-poster-rate');
+        if (savedOverride) {
+            baseRateInput.value = savedOverride.baseRate10Pulls;
+            finalPosterRateInput.value = savedOverride.finalPosterRate;
+        } else {
+            baseRateInput.value = universalRate;
+            finalPosterRateInput.value = universalRate;
+        }
+        ratesContainer.appendChild(entryElement);
+    }
+    
+    // --- STEP MANAGEMENT ---
+    function createNewStepForActiveBanner(stepDataToLoad = null) {
+        const currentBanner = findBannerById(activeBannerId);
+        if (!currentBanner) return;
+
+        const newStepId = stepDataToLoad ? stepDataToLoad.id : generateUniqueId('step');
+        const newStepData = stepDataToLoad || { id: newStepId, appliesToMultis: [], gemCost: 50 };
+        if (!stepDataToLoad) currentBanner.steps.push(newStepData);
+
+        const container = activeBannerContent.querySelector('.steps-definition-container');
+        if (container) {
+            renderStepDefinition(container, newStepData, currentBanner.units);
+        }
+        // New step requires adding rate entries to all existing units in this banner
+        const unitsContainerInBanner = activeBannerContent.querySelector('.units-container');
+        if (unitsContainerInBanner) {
+             unitsContainerInBanner.querySelectorAll('.unit-block').forEach(unitBlockDOM => {
+                const unitId = unitBlockDOM.dataset.unitId;
+                const unitInModel = currentBanner.units.find(u => u.id === unitId);
+                if (unitInModel && !unitBlockDOM.querySelector(`.unit-step-rate-entry[data-step-ref-id="${newStepData.id}"]`)) {
+                    // Find the visual index for the new step
+                    const visualIndex = Array.from(container.children).length -1; // current length - 1 if just added
+                     addUnitStepRateEntryToUnit(unitBlockDOM, newStepData, visualIndex, null, unitInModel.universalBaseRate);
+                }
+            });
+        }
+         updateStepNumbersAndDisplays(); // After all DOM changes
+    }
+
+    // --- UI RENDERING for current active banner ---
+    function renderStepDefinition(container, stepData, unitsInBanner) {
+        const stepInstance = stepDefinitionTemplate.content.cloneNode(true);
+        const blockElement = stepInstance.firstElementChild; // Get the <div class="step-definition-block item-block">
+        blockElement.dataset.stepId = stepData.id;
+        blockElement.querySelector('.step-multis').value = Array.isArray(stepData.appliesToMultis) ? stepData.appliesToMultis.join(',') : '';
+        blockElement.querySelector('.step-gem-cost').value = stepData.gemCost;
+        container.appendChild(blockElement);
+        // updateStepNumbersAndDisplays is called after all steps are rendered or after add/remove
+    }
+
+     function renderUnit(container, unitData, stepsInBanner) {
+        const unitInstance = unitTemplate.content.cloneNode(true);
+        const blockElement = unitInstance.firstElementChild; // Get <div class="unit-block item-block">
+        blockElement.dataset.unitId = unitData.id;
+        blockElement.querySelector('.unit-name').value = unitData.name;
+        blockElement.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate;
+        
+        const ratesContainer = blockElement.querySelector('.unit-steps-rates-container');
+        ratesContainer.innerHTML = ''; 
+        stepsInBanner.forEach((step, index) => {
+            const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
+            addUnitStepRateEntryToUnit(blockElement, step, index, override, unitData.universalBaseRate);
+        });
+        container.appendChild(blockElement);
+    }
+    
+    // --- CUSTOM ANALYSIS GROUP MANAGEMENT (within active banner) ---
+    function createNewAnalysisTargetForActiveBanner(analysisDataToLoad = null) {
+        const currentBanner = findBannerById(activeBannerId);
+        if (!currentBanner) return;
+
+        const newAnalysisId = analysisDataToLoad ? analysisDataToLoad.id : generateUniqueId('analysis');
+        const newAnalysisData = analysisDataToLoad || { 
+            id: newAnalysisId, 
+            name: `Custom Group ${currentBanner.customAnalyses.length + 1}`, 
+            type: "custom_group", 
+            constituents: [] 
+        };
+        if (!analysisDataToLoad) currentBanner.customAnalyses.push(newAnalysisData);
+
+        const container = activeBannerContent.querySelector('.analysis-targets-container');
+        if(container) renderAnalysisTarget(container, newAnalysisData, currentBanner.units);
+    }
+    
+    function renderAnalysisTarget(container, analysisData, unitsInBanner) {
+        const instance = analysisTargetTemplate.content.cloneNode(true);
+        const blockElement = instance.firstElementChild; // Get <div class="analysis-target-block item-block">
+        blockElement.dataset.analysisId = analysisData.id;
+        blockElement.querySelector('.analysis-name').value = analysisData.name;
+        const constituentsContainer = blockElement.querySelector('.constituent-units-container');
+        constituentsContainer.innerHTML = ''; 
+        if (analysisData.constituents) {
+            analysisData.constituents.forEach(c => renderConstituentUnit(constituentsContainer, c, unitsInBanner, analysisData.id));
+        }
+        container.appendChild(blockElement);
+    }
+    
+    function addConstituentUnitToGroupUI(parentAnalysisBlockDOM) {
+        const currentBanner = findBannerById(activeBannerId);
+        if (!currentBanner) return;
+        const analysisId = parentAnalysisBlockDOM.dataset.analysisId;
+        const analysisInModel = currentBanner.customAnalyses.find(a => a.id === analysisId);
+        if (!analysisInModel) return;
+
+        const newConstituentId = generateUniqueId('constituent');
+        const newConstituentData = { id: newConstituentId, unitId: null, multiplier: 1 };
+        if (currentBanner.units.length > 0) newConstituentData.unitId = currentBanner.units[0].id; // Default
+        analysisInModel.constituents.push(newConstituentData);
+
+        const container = parentAnalysisBlockDOM.querySelector('.constituent-units-container');
+        renderConstituentUnit(container, newConstituentData, currentBanner.units, analysisId);
+    }
+    
+    function renderConstituentUnit(container, constituentData, unitsInBanner, parentAnalysisId) {
+        const instance = constituentUnitTemplate.content.cloneNode(true);
+        const entryElement = instance.firstElementChild; // Get <div class="constituent-unit-entry...">
+        entryElement.dataset.constituentId = constituentData.id;
+        entryElement.dataset.parentAnalysisId = parentAnalysisId;
+
+        const unitSelect = entryElement.querySelector('.constituent-unit-select');
+        const multiplierInput = entryElement.querySelector('.constituent-unit-multiplier');
+
+        populateUnitDropdownForAnalysis(unitSelect, unitsInBanner, constituentData.unitId);
+        // Sync model with UI state immediately, especially if a default was chosen
+        constituentData.unitId = unitSelect.value; 
+        multiplierInput.value = constituentData.multiplier;
+        container.appendChild(entryElement);
+    }
+
+    function populateUnitDropdownForAnalysis(selectElement, unitsInBanner, desiredValue = null) { /* ... as before ... */
+        const originalValueBeforeRepopulate = selectElement.value;
+        selectElement.innerHTML = ''; 
+        if (!unitsInBanner || unitsInBanner.length === 0) {
+            selectElement.add(new Option("No units in banner", "", true, true));
+            selectElement.value = ""; return;
+        }
+        let valueToSet = desiredValue;
+        let desiredValueExists = unitsInBanner.some(unit => unit.id === desiredValue);
+        if (desiredValue && !desiredValueExists && unitsInBanner.some(unit => unit.id === originalValueBeforeRepopulate)) {
+            valueToSet = originalValueBeforeRepopulate; desiredValueExists = true;
+        } else if (!desiredValueExists && unitsInBanner.length > 0) valueToSet = unitsInBanner[0].id;
+        else if (!desiredValueExists && unitsInBanner.length === 0) valueToSet = "";
+        unitsInBanner.forEach(unit => selectElement.add(new Option(unit.name || `Unnamed Unit`, unit.id)));
+        selectElement.value = valueToSet;
+        if (selectElement.value === "" && selectElement.options.length > 0 && !unitsInBanner.some(u => u.id === valueToSet)) {
+             if(unitsInBanner.length > 0) selectElement.value = unitsInBanner[0].id;
+        }
+    }
+    
+    function updateAllAnalysisConstituentUnitDropdowns() { /* ... as before, ensures model is updated ... */
+        const currentBanner = findBannerById(activeBannerId);
+        if (!currentBanner || !activeBannerContent.querySelector('.banner-data-container')) return;
+        activeBannerContent.querySelectorAll('.analysis-target-block').forEach(analysisBlock => {
+            const analysisId = analysisBlock.dataset.analysisId;
+            const analysisInModel = currentBanner.customAnalyses.find(a => a.id === analysisId);
+            if (analysisInModel) {
+                analysisBlock.querySelectorAll('.constituent-unit-entry').forEach(constituentEntry => {
+                    const constituentId = constituentEntry.dataset.constituentId;
+                    const constituentInModel = analysisInModel.constituents.find(c => c.id === constituentId);
+                    const selectElement = constituentEntry.querySelector('.constituent-unit-select');
+                    if (selectElement && constituentInModel) {
+                        populateUnitDropdownForAnalysis(selectElement, currentBanner.units, constituentInModel.unitId);
+                        constituentInModel.unitId = selectElement.value; 
+                    }
+                });
+            }
+        });
+    }
+    
+    // --- BANNER MANAGEMENT (Tabs, Active State) ---
     function addBanner(bannerToLoad = null) {
-        defaultUnitNameCounter = 0; // Reset for new banner context if not loading
+        globalDefaultUnitNameCounter = 0; 
         const bannerId = bannerToLoad ? bannerToLoad.id : generateUniqueId('banner');
         const bannerName = bannerToLoad ? bannerToLoad.name : `Banner ${banners.length + 1}`;
         
         const newBannerData = bannerToLoad || {
-            id: bannerId,
-            name: bannerName,
-            totalMultis: 30,
-            steps: [],
-            units: [],
-            customAnalyses: [] // Renamed from 'analyses' to avoid conflict
+            id: bannerId, name: bannerName, totalMultis: 30,
+            steps: [], units: [], customAnalyses: []
         };
+        // Ensure all IDs are present when loading
+        if (bannerToLoad) {
+            newBannerData.steps.forEach(s => s.id = s.id || generateUniqueId('step'));
+            newBannerData.units.forEach(u => u.id = u.id || generateUniqueId('unit'));
+            newBannerData.customAnalyses.forEach(a => {
+                a.id = a.id || generateUniqueId('analysis');
+                if(a.constituents) a.constituents.forEach(c => c.id = c.id || generateUniqueId('constituent'));
+            });
+        }
+
         banners.push(newBannerData);
         renderBannerTabs();
-        setActiveBanner(bannerId);
 
-        if (bannerToLoad) { // If loading, populate content
-            populateBannerContent(newBannerData);
-        } else { // If new, create default step and unit
-            const bannerData = findBannerById(bannerId);
-            if (bannerData) {
-                 // Add default elements *to the bannerData object first*
-                const defaultStep = { id: generateUniqueId('step'), appliesToMultis: [], gemCost: 50 };
-                bannerData.steps.push(defaultStep);
-                
-                const defaultUnit = { 
-                    id: generateUniqueId('unit'), 
-                    name: `Unit ${++defaultUnitNameCounter}`, 
-                    universalBaseRate: "0.500", 
-                    stepOverrides: [] 
-                };
-                bannerData.units.push(defaultUnit);
-                populateBannerContent(bannerData); // Then render
-            }
+        if (!bannerToLoad) {
+            const defaultStep = { id: generateUniqueId('step'), appliesToMultis: [], gemCost: 50 };
+            newBannerData.steps.push(defaultStep);
+            globalDefaultUnitNameCounter++;
+            const defaultUnit = { 
+                id: generateUniqueId('unit'), name: `Unit ${globalDefaultUnitNameCounter}`, 
+                universalBaseRate: "0.500", stepOverrides: [] 
+            };
+            newBannerData.units.push(defaultUnit);
         }
+        setActiveBanner(bannerId);
         return bannerId;
     }
 
@@ -82,72 +321,22 @@ document.addEventListener('DOMContentLoaded', () => {
             populateBannerContent(bannerData);
             renameBannerInput.value = bannerData.name;
         }
-        renderBannerTabs(); // To highlight active tab
-    }
-
-    function deleteActiveBanner() {
-        if (!activeBannerId || banners.length <= 1) {
-            alert("Cannot delete the last banner.");
-            return;
-        }
-        if (!confirm(`Are you sure you want to delete banner "${findBannerById(activeBannerId).name}"?`)) return;
-
-        banners = banners.filter(b => b.id !== activeBannerId);
-        activeBannerId = banners.length > 0 ? banners[0].id : null;
         renderBannerTabs();
-        if (activeBannerId) setActiveBanner(activeBannerId);
-        else activeBannerContent.innerHTML = '<p>No active banner. Please add one.</p>';
-    }
-
-    function renameActiveBanner() {
-        if (!activeBannerId) return;
-        const newName = renameBannerInput.value.trim();
-        if (!newName) {
-            alert("Banner name cannot be empty.");
-            return;
-        }
-        const banner = findBannerById(activeBannerId);
-        if (banner) {
-            banner.name = newName;
-            renderBannerTabs();
-        }
-    }
-
-    function findBannerById(id) {
-        return banners.find(b => b.id === id);
-    }
-
-    // --- UI RENDERING ---
-    function renderBannerTabs() {
-        bannerTabsContainer.innerHTML = '';
-        banners.forEach(banner => {
-            const tab = document.createElement('div');
-            tab.className = 'banner-tab';
-            tab.textContent = banner.name;
-            tab.dataset.bannerId = banner.id;
-            if (banner.id === activeBannerId) {
-                tab.classList.add('active');
-            }
-            tab.addEventListener('click', () => setActiveBanner(banner.id));
-            bannerTabsContainer.appendChild(tab);
-        });
     }
 
     function populateBannerContent(bannerData) {
-        if (!bannerData) {
-            activeBannerContent.innerHTML = '<p>Error: Banner data not found.</p>';
-            return;
+         if (!bannerData) {
+            activeBannerContent.innerHTML = '<p class="error-message">Error: Selected banner data not found.</p>'; return;
         }
-        activeBannerContent.innerHTML = ''; // Clear previous
+        activeBannerContent.innerHTML = ''; 
         const bannerInstance = bannerContentTemplate.content.cloneNode(true);
-        const dataContainer = bannerInstance.querySelector('.banner-data-container');
-        dataContainer.dataset.bannerId = bannerData.id; // Link content to banner
+        const dataContainer = bannerInstance.firstElementChild; // Get the <div class="banner-data-container">
+        dataContainer.dataset.bannerId = bannerData.id; 
 
-        // Populate fields for this banner
         dataContainer.querySelector('.total-multis-input').value = bannerData.totalMultis;
         
         const stepsContainer = dataContainer.querySelector('.steps-definition-container');
-        stepsContainer.innerHTML = ''; // Clear for re-population
+        stepsContainer.innerHTML = ''; 
         bannerData.steps.forEach(step => renderStepDefinition(stepsContainer, step, bannerData.units));
 
         const unitsContainerElement = dataContainer.querySelector('.units-container');
@@ -156,467 +345,284 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const analysesContainer = dataContainer.querySelector('.analysis-targets-container');
         analysesContainer.innerHTML = '';
-        bannerData.customAnalyses.forEach(analysis => renderAnalysisTarget(analysesContainer, analysis, bannerData.units));
-
-        activeBannerContent.appendChild(bannerInstance);
-        updateAllUnitDropdownsInActiveBanner(); // For custom analyses
-    }
-    
-    // --- Element Rendering (within active banner) ---
-    // These functions now operate on and modify the bannerData object for the active banner.
-
-    function renderStepDefinition(container, stepData, unitsInBanner) {
-        const stepInstance = stepDefinitionTemplate.content.cloneNode(true);
-        const block = stepInstance.querySelector('.step-definition-block');
-        block.dataset.stepId = stepData.id;
-        block.querySelector('.step-number').textContent = container.children.length + 1; // Visual
-        block.querySelector('.step-multis').value = stepData.appliesToMultis.join(',');
-        block.querySelector('.step-gem-cost').value = stepData.gemCost;
-        container.appendChild(stepInstance);
-        // Update unit step rate displays for all units in this banner
-        updateUnitStepRateDisplaysForBanner(unitsInBanner, findBannerById(activeBannerId).steps);
-    }
-
-    function renderUnit(container, unitData, stepsInBanner) {
-        const unitInstance = unitTemplate.content.cloneNode(true);
-        const block = unitInstance.querySelector('.unit-block');
-        block.dataset.unitId = unitData.id;
-        block.querySelector('.unit-name').value = unitData.name;
-        block.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate;
-        
-        const ratesContainer = block.querySelector('.unit-steps-rates-container');
-        stepsInBanner.forEach((step, index) => {
-            const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
-            renderUnitStepRateEntry(ratesContainer, step, index, override, unitData.universalBaseRate);
-        });
-        container.appendChild(unitInstance);
-    }
-    
-    function renderUnitStepRateEntry(container, stepData, stepVisualIndex, overrideData, universalRate) {
-        const entryInstance = unitStepRateTemplate.content.cloneNode(true);
-        const entryDiv = entryInstance.querySelector('.unit-step-rate-entry');
-        entryDiv.dataset.stepRefId = stepData.id; // Link to the global step ID
-        entryDiv.querySelector('.unit-step-number-display').textContent = stepVisualIndex + 1;
-        entryDiv.querySelector('.unit-step-multis-display').textContent = stepData.appliesToMultis.join(',') || 'N/A';
-        
-        const baseRateInput = entryDiv.querySelector('.unit-step-base-rate');
-        const finalPosterRateInput = entryDiv.querySelector('.unit-step-final-poster-rate');
-        if (overrideData) {
-            baseRateInput.value = overrideData.baseRate10Pulls;
-            finalPosterRateInput.value = overrideData.finalPosterRate;
+        if (bannerData.customAnalyses) { // Ensure customAnalyses exists
+            bannerData.customAnalyses.forEach(analysis => renderAnalysisTarget(analysesContainer, analysis, bannerData.units));
         } else {
-            baseRateInput.value = universalRate;
-            finalPosterRateInput.value = universalRate;
+            bannerData.customAnalyses = []; // Initialize if missing
         }
-        container.appendChild(entryInstance);
+        activeBannerContent.appendChild(dataContainer);
+        updateStepNumbersAndDisplays(); // Crucial after rendering all steps
     }
 
-    function renderAnalysisTarget(container, analysisData, unitsInBanner) {
-        const instance = analysisTargetTemplate.content.cloneNode(true);
-        const block = instance.querySelector('.analysis-target-block');
-        block.dataset.analysisId = analysisData.id;
-        block.querySelector('.analysis-name').value = analysisData.name;
-        const constituentsContainer = block.querySelector('.constituent-units-container');
-        analysisData.constituents.forEach(c => renderConstituentUnit(constituentsContainer, c, unitsInBanner));
-        container.appendChild(instance);
+    function deleteActiveBanner() { /* ... as before ... */ 
+        if (!activeBannerId || banners.length <= 1) { alert("Cannot delete the last banner."); return; }
+        const bannerToDelete = findBannerById(activeBannerId);
+        if (!confirm(`Delete banner "${bannerToDelete.name}"?`)) return;
+        banners = banners.filter(b => b.id !== activeBannerId);
+        activeBannerId = banners.length > 0 ? banners[0].id : null;
+        renderBannerTabs();
+        if (activeBannerId) setActiveBanner(activeBannerId);
+        else activeBannerContent.innerHTML = '<p>No active banner.</p>';
     }
-
-    function renderConstituentUnit(container, constituentData, unitsInBanner) {
-        const instance = constituentUnitTemplate.content.cloneNode(true);
-        const entry = instance.querySelector('.constituent-unit-entry');
-        entry.dataset.constituentId = constituentData.id;
-        const unitSelect = entry.querySelector('.constituent-unit-select');
-        populateUnitDropdownForAnalysis(unitSelect, unitsInBanner, constituentData.unitId);
-        entry.querySelector('.constituent-unit-multiplier').value = constituentData.multiplier;
-        container.appendChild(instance);
+    function renameActiveBanner() { /* ... as before ... */ 
+        if (!activeBannerId) return;
+        const newName = renameBannerInput.value.trim();
+        if (!newName) { alert("Banner name cannot be empty."); return; }
+        const banner = findBannerById(activeBannerId);
+        if (banner) { banner.name = newName; renderBannerTabs(); }
     }
-
-    function populateUnitDropdownForAnalysis(selectElement, unitsInBanner, selectedValue = null) {
-        selectElement.innerHTML = '';
-        if (!unitsInBanner || unitsInBanner.length === 0) {
-            selectElement.add(new Option("No units in banner", "", true, true));
-            return;
-        }
-        unitsInBanner.forEach(unit => {
-            selectElement.add(new Option(unit.name || `Unnamed (ID: ${unit.id.substr(0,5)})`, unit.id));
-        });
-        if (selectedValue) selectElement.value = selectedValue;
-        else if (unitsInBanner.length > 0) selectElement.value = unitsInBanner[0].id; // Default to first
-    }
-    
-    function updateAllUnitDropdownsInActiveBanner() {
-        const activeBannerData = findBannerById(activeBannerId);
-        if (!activeBannerData || !activeBannerContent.querySelector('.banner-data-container')) return;
-
-        activeBannerContent.querySelectorAll('.analysis-target-block').forEach(analysisBlock => {
-            analysisBlock.querySelectorAll('.constituent-unit-select').forEach(select => {
-                populateUnitDropdownForAnalysis(select, activeBannerData.units, select.value);
-            });
-        });
-    }
-    
-    function updateUnitStepRateDisplaysForBanner(unitsInBanner, stepsInBanner) {
-        const activeBannerDiv = activeBannerContent.querySelector(`.banner-data-container[data-banner-id="${activeBannerId}"]`);
-        if (!activeBannerDiv) return;
-
-        unitsInBanner.forEach(unitData => {
-            const unitBlock = activeBannerDiv.querySelector(`.unit-block[data-unit-id="${unitData.id}"]`);
-            if (!unitBlock) return;
-            const ratesContainer = unitBlock.querySelector('.unit-steps-rates-container');
-            ratesContainer.innerHTML = ''; // Clear and re-render all step rate entries for this unit
-            stepsInBanner.forEach((step, index) => {
-                 const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
-                 renderUnitStepRateEntry(ratesContainer, step, index, override, unitData.universalBaseRate);
-            });
+    function findBannerById(id) { return banners.find(b => b.id === id); }
+    function renderBannerTabs() { /* ... as before ... */ 
+        bannerTabsContainer.innerHTML = '';
+        banners.forEach(banner => {
+            const tab = document.createElement('div');
+            tab.className = 'banner-tab'; tab.textContent = banner.name; tab.dataset.bannerId = banner.id;
+            if (banner.id === activeBannerId) tab.classList.add('active');
+            tab.addEventListener('click', () => setActiveBanner(banner.id));
+            bannerTabsContainer.appendChild(tab);
         });
     }
 
 
-    // --- EVENT HANDLERS (Delegated from activeBannerContent or document.body) ---
-    activeBannerContent.addEventListener('click', (e) => {
+    // --- EVENT HANDLERS (Main buttons and delegated ones) ---
+    addBannerBtn.addEventListener('click', () => addBanner(null)); // Pass null for new banner
+    renameBannerBtn.addEventListener('click', renameActiveBanner);
+    deleteBannerBtn.addEventListener('click', deleteActiveBanner);
+
+    activeBannerContent.addEventListener('click', (e) => { 
         const currentBanner = findBannerById(activeBannerId);
         if (!currentBanner) return;
 
-        // Add Step
-        if (e.target.matches('.add-step-btn')) {
-            const newStep = { id: generateUniqueId('step'), appliesToMultis: [], gemCost: 50 };
-            currentBanner.steps.push(newStep);
-            const container = activeBannerContent.querySelector('.steps-definition-container');
-            renderStepDefinition(container, newStep, currentBanner.units);
-            updateUnitStepRateDisplaysForBanner(currentBanner.units, currentBanner.steps);
-        }
-        // Remove Step
+        if (e.target.matches('.add-step-btn')) createNewStepForActiveBanner(null);
         if (e.target.matches('.step-definition-block .remove-item-btn')) {
             const stepBlock = e.target.closest('.step-definition-block');
             const stepId = stepBlock.dataset.stepId;
             currentBanner.steps = currentBanner.steps.filter(s => s.id !== stepId);
-            // Also remove overrides for this step from all units in this banner
-            currentBanner.units.forEach(u => {
-                u.stepOverrides = u.stepOverrides.filter(so => so.globalStepDefId !== stepId);
-            });
-            stepBlock.remove();
+            currentBanner.units.forEach(u => u.stepOverrides = u.stepOverrides.filter(so => so.globalStepDefId !== stepId));
+            stepBlock.remove(); // Remove the item-block itself
             updateUnitStepRateDisplaysForBanner(currentBanner.units, currentBanner.steps);
-            // Re-number visual step numbers
-            const remainingStepBlocks = activeBannerContent.querySelectorAll('.step-definition-block');
-            remainingStepBlocks.forEach((block, index) => block.querySelector('.step-number').textContent = index + 1);
+            updateStepNumbersAndDisplays();
         }
-        // Add Unit
-        if (e.target.matches('.add-unit-btn')) {
-            defaultUnitNameCounter++;
-            const newUnit = { 
-                id: generateUniqueId('unit'), 
-                name: `Unit ${defaultUnitNameCounter}`, 
-                universalBaseRate: "0.500", 
-                stepOverrides: [] 
-            };
-            currentBanner.units.push(newUnit);
-            const container = activeBannerContent.querySelector('.units-container');
-            renderUnit(container, newUnit, currentBanner.steps);
-            updateAllUnitDropdownsInActiveBanner();
-        }
-        // Remove Unit
-        if (e.target.matches('.unit-block .remove-item-btn')) {
+        if (e.target.matches('.add-unit-btn')) createNewUnitForActiveBanner(null);
+        if (e.target.matches('.unit-block .remove-item-btn')) { /* ... (updated in previousthought, ensure correct element removal) ... */
             const unitBlock = e.target.closest('.unit-block');
             const unitId = unitBlock.dataset.unitId;
             currentBanner.units = currentBanner.units.filter(u => u.id !== unitId);
-            // Also remove this unit from any custom analyses in this banner
             currentBanner.customAnalyses.forEach(analysis => {
                 analysis.constituents = analysis.constituents.filter(c => c.unitId !== unitId);
+                 const analysisBlockDOM = activeBannerContent.querySelector(`.analysis-target-block[data-analysis-id="${analysis.id}"]`);
+                if (analysisBlockDOM) { /* ... re-render constituents ... */ 
+                    const constituentsContainer = analysisBlockDOM.querySelector('.constituent-units-container');
+                    constituentsContainer.innerHTML = ''; // Clear and re-render
+                    analysis.constituents.forEach(c => renderConstituentUnit(constituentsContainer, c, currentBanner.units, analysis.id));
+                }
             });
-            unitBlock.remove();
-            updateAllUnitDropdownsInActiveBanner();
-            // Re-render custom analyses if units changed
-            const analysesContainer = activeBannerContent.querySelector('.analysis-targets-container');
-            analysesContainer.innerHTML = '';
-            currentBanner.customAnalyses.forEach(analysis => renderAnalysisTarget(analysesContainer, analysis, currentBanner.units));
+            unitBlock.remove(); 
+            updateAllAnalysisConstituentUnitDropdowns();
         }
-        // Use Universal Rate for Unit
-        if (e.target.matches('.unit-block .use-base-rate-btn')) {
-            const unitBlock = e.target.closest('.unit-block');
+        if (e.target.matches('.unit-block .use-base-rate-btn')) { /* ... as before ... */ 
+             const unitBlock = e.target.closest('.unit-block');
             const unitId = unitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
             if (unitData) {
                 const universalRate = unitBlock.querySelector('.unit-universal-base-rate').value;
-                unitData.universalBaseRate = universalRate; // Save to data
-                // Clear existing overrides and re-render with universal
+                unitData.universalBaseRate = universalRate;
                 unitData.stepOverrides = []; 
-                const ratesContainer = unitBlock.querySelector('.unit-steps-rates-container');
-                ratesContainer.innerHTML = '';
-                currentBanner.steps.forEach((step, index) => {
-                    renderUnitStepRateEntry(ratesContainer, step, index, null, universalRate);
-                });
+                updateUnitStepRateDisplaysForBanner([unitData], currentBanner.steps);
             }
         }
-        // Add Custom Analysis Group
-        if (e.target.matches('.add-analysis-target-btn')) {
-            const newAnalysis = { id: generateUniqueId('analysis'), name: `Custom Group ${currentBanner.customAnalyses.length + 1}`, constituents: [] };
-            currentBanner.customAnalyses.push(newAnalysis);
-            const container = activeBannerContent.querySelector('.analysis-targets-container');
-            renderAnalysisTarget(container, newAnalysis, currentBanner.units);
-        }
-        // Remove Custom Analysis Group
-        if (e.target.matches('.analysis-target-block .remove-item-btn')) {
+        if (e.target.matches('.add-analysis-target-btn')) createNewAnalysisTargetForActiveBanner(null);
+        if (e.target.matches('.analysis-target-block .remove-item-btn')) { /* ... as before ... */
             const analysisBlock = e.target.closest('.analysis-target-block');
             const analysisId = analysisBlock.dataset.analysisId;
             currentBanner.customAnalyses = currentBanner.customAnalyses.filter(a => a.id !== analysisId);
             analysisBlock.remove();
         }
-        // Add Constituent to Group
         if (e.target.matches('.analysis-target-block .add-constituent-unit-btn')) {
-            const analysisBlock = e.target.closest('.analysis-target-block');
-            const analysisId = analysisBlock.dataset.analysisId;
-            const analysisData = currentBanner.customAnalyses.find(a => a.id === analysisId);
-            if (analysisData) {
-                const newConstituent = { id: generateUniqueId('constituent'), unitId: null, multiplier: 1 };
-                // If there are units, default to the first one
-                if (currentBanner.units.length > 0) newConstituent.unitId = currentBanner.units[0].id;
-                analysisData.constituents.push(newConstituent);
-                const container = analysisBlock.querySelector('.constituent-units-container');
-                renderConstituentUnit(container, newConstituent, currentBanner.units);
-            }
+            const parentAnalysisBlockDOM = e.target.closest('.analysis-target-block');
+            addConstituentUnitToGroupUI(parentAnalysisBlockDOM);
         }
-        // Remove Constituent from Group
-        if (e.target.matches('.constituent-unit-entry .remove-constituent-btn')) {
+        if (e.target.matches('.constituent-unit-entry .remove-constituent-btn')) { /* ... as before ... */
             const constituentEntry = e.target.closest('.constituent-unit-entry');
             const analysisBlock = e.target.closest('.analysis-target-block');
             const analysisId = analysisBlock.dataset.analysisId;
             const analysisData = currentBanner.customAnalyses.find(a => a.id === analysisId);
             if (analysisData) {
-                const constituentId = constituentEntry.dataset.constituentId; // Assuming you add this
+                const constituentId = constituentEntry.dataset.constituentId;
                 analysisData.constituents = analysisData.constituents.filter(c => c.id !== constituentId);
             }
             constituentEntry.remove();
         }
     });
 
-    activeBannerContent.addEventListener('change', (e) => { // For input changes
+    activeBannerContent.addEventListener('change', (e) => { /* ... (as before, ensures model updates) ... */ 
         const currentBanner = findBannerById(activeBannerId);
         if (!currentBanner) return;
-
-        // Total Multis for banner
-        if (e.target.matches('.total-multis-input')) {
-            currentBanner.totalMultis = parseInt(e.target.value) || 30;
-        }
-        // Step definition change
+        if (e.target.matches('.total-multis-input')) currentBanner.totalMultis = parseInt(e.target.value) || 30;
         const stepBlock = e.target.closest('.step-definition-block');
-        if (stepBlock) {
+        if (stepBlock) { /* ... update currentBanner.steps[stepId] ... */ 
             const stepId = stepBlock.dataset.stepId;
             const stepData = currentBanner.steps.find(s => s.id === stepId);
-            if (stepData) {
+            if(stepData){
                 if (e.target.matches('.step-multis')) {
-                    stepData.appliesToMultis = e.target.value.split(',').map(s => s.trim()).filter(Boolean).map(Number);
+                    stepData.appliesToMultis = e.target.value.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
                     updateUnitStepRateDisplaysForBanner(currentBanner.units, currentBanner.steps);
-                } else if (e.target.matches('.step-gem-cost')) {
-                    stepData.gemCost = parseInt(e.target.value) || 50;
-                }
+                } else if (e.target.matches('.step-gem-cost')) stepData.gemCost = parseInt(e.target.value) || 50;
             }
         }
-        // Unit definition change
         const unitBlock = e.target.closest('.unit-block');
-        if (unitBlock) {
+        if (unitBlock) { /* ... update currentBanner.units[unitId] ... */ 
             const unitId = unitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
-            if (unitData) {
-                if (e.target.matches('.unit-name')) {
-                    unitData.name = e.target.value;
-                    updateAllAnalysisConstituentUnitDropdowns(); // Reflect name change
-                } else if (e.target.matches('.unit-universal-base-rate')) {
-                    unitData.universalBaseRate = e.target.value;
-                    // If universal rate changes, existing overrides remain, but new ones would use this
-                }
+            if(unitData){
+                if (e.target.matches('.unit-name')) { unitData.name = e.target.value; updateAllAnalysisConstituentUnitDropdowns(); } 
+                else if (e.target.matches('.unit-universal-base-rate')) unitData.universalBaseRate = e.target.value;
             }
         }
-        // Unit Step Rate Override Change
         const unitStepRateEntry = e.target.closest('.unit-step-rate-entry');
-        if (unitStepRateEntry) {
+        if (unitStepRateEntry) { /* ... update currentBanner.units[unitId].stepOverrides ... */ 
             const parentUnitBlock = e.target.closest('.unit-block');
             const unitId = parentUnitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
             const stepRefId = unitStepRateEntry.dataset.stepRefId;
-            if (unitData) {
+            if (unitData && stepRefId) {
                 let override = unitData.stepOverrides.find(so => so.globalStepDefId === stepRefId);
-                if (!override) {
-                    override = { globalStepDefId: stepRefId };
-                    unitData.stepOverrides.push(override);
-                }
+                if (!override) { override = { globalStepDefId: stepRefId }; unitData.stepOverrides.push(override); }
                 if (e.target.matches('.unit-step-base-rate')) override.baseRate10Pulls = e.target.value;
                 if (e.target.matches('.unit-step-final-poster-rate')) override.finalPosterRate = e.target.value;
             }
         }
-        // Analysis Group Change
         const analysisBlock = e.target.closest('.analysis-target-block');
-        if (analysisBlock) {
+        if (analysisBlock) { /* ... update currentBanner.customAnalyses[analysisId].name ... */ 
             const analysisId = analysisBlock.dataset.analysisId;
             const analysisData = currentBanner.customAnalyses.find(a => a.id === analysisId);
-            if (analysisData && e.target.matches('.analysis-name')) {
-                analysisData.name = e.target.value;
-            }
+            if (analysisData && e.target.matches('.analysis-name')) analysisData.name = e.target.value;
         }
-        // Constituent Unit Change
         const constituentEntry = e.target.closest('.constituent-unit-entry');
-        if (constituentEntry) {
+        if (constituentEntry) { /* ... update currentBanner.customAnalyses[analysisId].constituents[constituentId] ... */ 
             const parentAnalysisBlock = e.target.closest('.analysis-target-block');
             const analysisId = parentAnalysisBlock.dataset.analysisId;
             const analysisData = currentBanner.customAnalyses.find(a => a.id === analysisId);
-            const constituentId = constituentEntry.dataset.constituentId; // Need to set this when creating
-            const constituent = analysisData ? analysisData.constituents.find(c => c.id === constituentId) : null;
-            if (constituent) {
-                if (e.target.matches('.constituent-unit-select')) constituent.unitId = e.target.value;
-                if (e.target.matches('.constituent-unit-multiplier')) constituent.multiplier = parseInt(e.target.value) || 1;
+            const constituentId = constituentEntry.dataset.constituentId;
+            const constituentInModel = analysisData ? analysisData.constituents.find(c => c.id === constituentId) : null;
+            if (constituentInModel) {
+                if (e.target.matches('.constituent-unit-select')) constituentInModel.unitId = e.target.value;
+                if (e.target.matches('.constituent-unit-multiplier')) constituentInModel.multiplier = parseInt(e.target.value) || 1;
             }
         }
     });
 
-
-    // --- BANNER CONTROL BUTTONS ---
-    addBannerBtn.addEventListener('click', () => addBanner());
-    renameBannerBtn.addEventListener('click', renameActiveBanner);
-    deleteBannerBtn.addEventListener('click', deleteActiveBanner);
-
-
-    // --- NAMED SAVE/LOAD STATE ---
-    function listSavedSetups() {
+    // --- NAMED SAVE/LOAD STATE --- (as before, uses getCurrentState and applyState)
+    function listSavedSetups() { /* ... as before ... */ 
         loadSetupSelect.innerHTML = '<option value="">-- Select a saved setup --</option>';
         const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        Object.keys(allSetups).sort().forEach(name => {
-            loadSetupSelect.add(new Option(name, name));
-        });
+        Object.keys(allSetups).sort().forEach(name => { loadSetupSelect.add(new Option(name, name)); });
+    }
+    saveNamedStateBtn.addEventListener('click', () => { /* ... as before, saves `banners` array ... */ 
+        const name = saveSetupNameInput.value.trim();
+        if (!name) { alert('Please enter a name.'); return; }
+        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        allSetups[name] = banners; // `banners` should be up-to-date
+        localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
+        alert(`Setup "${name}" saved!`); listSavedSetups(); loadSetupSelect.value = name;
+    });
+    loadNamedStateBtn.addEventListener('click', () => { /* Uses applyState */ 
+        const name = loadSetupSelect.value;
+        if (!name) { alert('Please select a setup.'); return; }
+        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        const stateToLoad = allSetups[name]; // This is the banners array
+        if (!stateToLoad || !Array.isArray(stateToLoad)) { alert(`Setup "${name}" invalid.`); return; }
+        applyState(stateToLoad); 
+        saveSetupNameInput.value = name; alert(`Setup "${name}" loaded!`);
+    });
+    deleteNamedStateBtn.addEventListener('click', () => { /* ... as before ... */ 
+        const name = loadSetupSelect.value; if (!name) { alert('Select setup.'); return; }
+        if (!confirm(`Delete "${name}"?`)) return;
+        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
+        delete allSetups[name]; localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
+        alert(`"${name}" deleted.`); listSavedSetups(); saveSetupNameInput.value = '';
+    });
+    
+    function getCurrentState() { /* Should just return the `banners` array, assuming it's kept in sync */
+        return banners; // Or deep clone: JSON.parse(JSON.stringify(banners));
     }
 
-    saveNamedStateBtn.addEventListener('click', () => {
-        const name = saveSetupNameInput.value.trim();
-        if (!name) { alert('Please enter a name for this setup.'); return; }
+    function applyState(bannersToLoad) { // Parameter is the array of banner objects
+        banners = []; activeBannerId = null; activeBannerContent.innerHTML = ''; globalDefaultUnitNameCounter = 0;
         
-        // Important: Ensure current banner's UI data is saved to its object in `banners` array first
-        // This might require explicitly calling a function to parse active banner's UI into its object
-        // For now, assume data in `banners` array is reasonably up-to-date due to event listeners.
-        
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        allSetups[name] = banners; // Save the entire banners array
-        localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
-        alert(`Setup "${name}" saved!`);
-        listSavedSetups();
-        loadSetupSelect.value = name;
-    });
-
-    loadNamedStateBtn.addEventListener('click', () => {
-        const name = loadSetupSelect.value;
-        if (!name) { alert('Please select a setup to load.'); return; }
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        const bannersToLoad = allSetups[name];
-        if (!bannersToLoad) { alert(`Setup "${name}" not found.`); return; }
-
-        banners = []; // Clear current banners
-        activeBannerId = null;
-        activeBannerContent.innerHTML = ''; // Clear UI for active banner
-        
-        bannersToLoad.forEach((bannerData, index) => {
-            // Add banner will try to create defaults if not loading.
-            // We need to pass bannerData directly to avoid this.
-            // The addBanner function needs modification to handle this better or a separate loadBanner.
-            // For simplicity here, let's reuse addBanner and it will call populateBannerContent.
-            if (index === 0) { // For the first banner, ensure it's fully populated
-                addBanner(bannerData); // This will set it active and populate
-            } else {
-                // For subsequent banners, just add their data to the `banners` array.
-                // The UI for these will be built when they are switched to.
-                const bannerId = bannerData.id || generateUniqueId('banner');
-                const loadedBanner = { ...bannerData, id: bannerId }; // Ensure ID
-                banners.push(loadedBanner);
-            }
+        // Create data models first
+        bannersToLoad.forEach(bannerData => {
+            const bannerId = bannerData.id || generateUniqueId('banner');
+            const loadedBanner = {
+                id: bannerId,
+                name: bannerData.name || `Banner ${banners.length + 1}`,
+                totalMultis: bannerData.totalMultis || 30,
+                steps: (bannerData.steps || []).map(s => ({...s, id: s.id || generateUniqueId('step')}) ),
+                units: (bannerData.units || []).map(u => ({...u, id: u.id || generateUniqueId('unit')}) ),
+                customAnalyses: (bannerData.customAnalyses || []).map(a => ({
+                    ...a, 
+                    id: a.id || generateUniqueId('analysis'),
+                    constituents: (a.constituents || []).map(c => ({...c, id: c.id || generateUniqueId('constituent')}))
+                }))
+            };
+            banners.push(loadedBanner);
         });
+
         renderBannerTabs();
         if (banners.length > 0) {
-            setActiveBanner(banners[0].id); // Set first loaded banner as active
+            setActiveBanner(banners[0].id); // This will call populateBannerContent
+        } else {
+            activeBannerContent.innerHTML = '<p>Loaded setup is empty or invalid.</p>';
         }
-        
-        saveSetupNameInput.value = name;
-        alert(`Setup "${name}" loaded!`);
-    });
-
-    deleteNamedStateBtn.addEventListener('click', () => {
-        const name = loadSetupSelect.value;
-        if (!name) { alert('Please select a setup to delete.'); return; }
-        if (!confirm(`Delete setup "${name}"?`)) return;
-        const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-        delete allSetups[name];
-        localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
-        alert(`Setup "${name}" deleted!`);
-        listSavedSetups();
-        saveSetupNameInput.value = '';
-    });
-
+    }
 
     // --- DATA COLLECTION FOR RESULTS PAGE ---
-    calculateBtnLink.addEventListener('click', () => {
+    calculateBtnLink.addEventListener('click', () => { /* ... as before ... */ 
         const dataForAllBanners = banners.map(bannerData => {
-            // For each banner, collect its current state from the `bannerData` object
-            // Ensure the bannerData object is up-to-date with UI changes before this.
-            // This is implicitly handled by the 'change' event listeners updating the objects.
-            const singleUnitAnalyses = bannerData.units.map(u => ({
-                bannerName: bannerData.name, // Add banner name for results page
-                name: u.name,
-                type: "single_unit",
-                unitId: u.id
-            }));
+            const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
             const customGroupAnalyses = bannerData.customAnalyses.map(cg => ({
-                bannerName: bannerData.name, // Add banner name
-                ...cg, // Spread the custom group data (name, type="custom_group", constituents)
-            }));
-
+                bannerName: bannerData.name, name: cg.name, type: "custom_group", 
+                constituents: cg.constituents.filter(c => c.unitId) 
+            })).filter(cg => cg.constituents.length > 0);
             return {
-                bannerId: bannerData.id,
-                bannerName: bannerData.name,
-                totalMultis: bannerData.totalMultis,
-                units: bannerData.units, // Base unit definitions for this banner
-                stepDefinitions: bannerData.steps, // Step definitions for this banner
-                // Analyses for results will combine auto single units and custom groups
+                bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
+                units: bannerData.units, stepDefinitions: bannerData.steps, 
                 analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
             };
-        });
-
-        console.log("Data for All Banners (to Results):", JSON.parse(JSON.stringify(dataForAllBanners)));
-        localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(banners)); // Save current multi-banner state
+        }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
+        if (dataForAllBanners.length === 0) { alert("No units/analyses defined."); return; }
+        localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(banners)); 
         localStorage.setItem('sugofestCalcSetup', JSON.stringify({ allBannerData: dataForAllBanners }));
     });
 
-    // --- AUTO-LOAD LAST CALCULATED STATE ---
-    function autoLoadLastCalculatedState() {
+    // --- AUTO-LOAD & INITIALIZATION ---
+    function autoLoadLastCalculatedState() { /* Uses applyState */ 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('autoLoadLast')) {
             const lastStateJSON = localStorage.getItem(LAST_CALCULATED_STATE_KEY);
             if (lastStateJSON) {
-                const stateToLoad = JSON.parse(lastStateJSON);
-                banners = []; // Clear current state before applying
-                activeBannerId = null;
-                activeBannerContent.innerHTML = '';
-
-                stateToLoad.forEach((bannerData, index) => {
-                     if (index === 0) { 
-                        addBanner(bannerData);
-                    } else {
-                        const bannerId = bannerData.id || generateUniqueId('banner');
-                        const loadedBanner = { ...bannerData, id: bannerId }; 
-                        banners.push(loadedBanner);
+                try {
+                    const stateToLoad = JSON.parse(lastStateJSON); // This is the `banners` array
+                    if (Array.isArray(stateToLoad)) { // No need for stateToLoad.length > 0 check here, applyState handles empty
+                        applyState(stateToLoad); // applyState will clear current and load
+                        console.log("Auto-loaded last calculated state.");
+                         if (window.history.replaceState) { /* ... clean URL ... */ 
+                            const cleanURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                            window.history.replaceState({ path: cleanURL }, '', cleanURL);
+                         }
+                        return true; // Indicates state was loaded
                     }
-                });
-                renderBannerTabs();
-                if (banners.length > 0) setActiveBanner(banners[0].id);
-
-                console.log("Auto-loaded last calculated state.");
-                // Optional: remove the temp state after loading
-                // localStorage.removeItem(LAST_CALCULATED_STATE_KEY);
-                // Optional: clean URL
-                // window.history.replaceState({}, document.title, window.location.pathname);
+                } catch (e) { console.error("Error parsing auto-load state:", e); }
             }
         }
+        return false; // No state loaded
     }
 
-
-    // --- INITIALIZATION ---
     listSavedSetups(); 
-    autoLoadLastCalculatedState(); // Check for auto-load trigger
-    if (banners.length === 0) { // If auto-load didn't populate, start fresh
-        addBanner(); // Start with one default banner
+    const loaded = autoLoadLastCalculatedState(); 
+    if (!loaded && banners.length === 0) { 
+        addBanner(null); // Add one default banner if nothing loaded and banners array is empty
+    } else if (banners.length > 0 && !activeBannerId) { // Should be handled by applyState or addBanner
+        setActiveBanner(banners[0].id);
     }
 });
