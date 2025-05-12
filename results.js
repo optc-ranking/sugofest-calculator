@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         backToEntryLink.href = "index.html?autoLoadLast=true";
     }
 
-    if (!storedData) { /* ... as before ... */ 
+    if (!storedData) { 
         document.body.innerHTML = "<h1>No data found.</h1><p><a href='index.html'>Please go back to data entry.</a></p>";
         return;
     }
@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setupForAllBanners = JSON.parse(storedData);
     const allBannerData = setupForAllBanners.allBannerData;
 
-    if (!allBannerData || !Array.isArray(allBannerData) || allBannerData.length === 0) { /* ... as before ... */ 
+    if (!allBannerData || !Array.isArray(allBannerData) || allBannerData.length === 0) { 
         document.body.innerHTML = "<h1>Banner data is missing or invalid.</h1><p><a href='index.html'>Go Back</a></p>";
         return;
     }
@@ -29,15 +29,16 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const assignedColors = {}; 
     let colorIndexGlobal = 0;
-    const PREDEFINED_COLORS = [ /* ... as before ... */ 
+    const PREDEFINED_COLORS = [ 
         '#e6194B', '#3cb44b', '#ffe119', '#4363d8', '#f58231', 
         '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
         '#008080', '#e6beff', '#9A6324', '#fffac8', '#800000', 
         '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
     ];
     const MAX_MULTIS_FOR_CSV = 200;
+    const PROBABILITY_THRESHOLD_FOR_100_PERCENT = 0.9999; // If cumulative P(pull) > this, treat as 100%
 
-    function getNextColor(analysisFullName) { /* ... as before ... */ 
+    function getNextColor(analysisFullName) { 
         if (!assignedColors[analysisFullName]) {
             assignedColors[analysisFullName] = PREDEFINED_COLORS[colorIndexGlobal % PREDEFINED_COLORS.length];
             colorIndexGlobal++;
@@ -45,91 +46,114 @@ document.addEventListener('DOMContentLoaded', () => {
         return assignedColors[analysisFullName];
     }
     
-    function getUnitRatesAndCostForMulti(unitId, multiNumber, unitsInCurrentBanner, stepsInCurrentBanner, forUniversalPhase = false) { /* ... as before ... */ 
+    function getUnitRatesAndCostForMulti(unitId, multiNumber, unitsInCurrentBanner, stepsInCurrentBanner, forUniversalPhase = false) { 
         const unit = unitsInCurrentBanner.find(u => u.id === unitId);
         if (!unit) return { br: 0, fpr: 0, cost: 50, isUniversal: forUniversalPhase };
         const universalBr = (parseFloat(unit.universalBaseRate) || 0) / 100;
-        const universalFpr = (parseFloat(unit.universalBaseRate) || 0) / 100;
+        const universalFpr = (parseFloat(unit.universalBaseRate) || 0) / 100; // Universal implies same rate for all 11
+        
         if (forUniversalPhase) return { br: universalBr, fpr: universalFpr, cost: 50, isUniversal: true };
+
         let br = universalBr, fpr = universalFpr, cost = 50, stepApplied = false;
+        
         for (const stepDef of stepsInCurrentBanner) {
             const appliesTo = Array.isArray(stepDef.appliesToMultis) ? stepDef.appliesToMultis : [];
             if (appliesTo.includes(multiNumber)) {
-                cost = parseInt(stepDef.gemCost) || 50; stepApplied = true;
+                cost = parseInt(stepDef.gemCost) || 50; 
+                stepApplied = true;
                 const unitStepOverride = unit.stepOverrides.find(so => so.globalStepDefId === stepDef.id);
                 if (unitStepOverride) {
+                    // Use specific override if present, otherwise fallback to universal FOR THAT STEP'S CONTEXT (before falling back to true universal)
                     br = unitStepOverride.hasOwnProperty('baseRate10Pulls') ? (parseFloat(unitStepOverride.baseRate10Pulls) || 0) / 100 : universalBr;
                     fpr = unitStepOverride.hasOwnProperty('finalPosterRate') ? (parseFloat(unitStepOverride.finalPosterRate) || 0) / 100 : universalFpr;
+                } else {
+                    // If no specific override for this unit on this step, it uses its universal rate
+                    br = universalBr;
+                    fpr = universalFpr;
                 }
-                break;
+                break;  // Step found and applied
             }
         }
+        // If no step applied to this multiNumber, it's a "universal" phase for this multi (default rates/cost)
         return { br, fpr, cost, isUniversal: !stepApplied };
     }
 
-    function calculateStatsForSingleAnalysis(analysisSpec, unitsInCurrentBanner, stepsInCurrentBanner, maxMultisForBannerGraph, bannerNameForLabel) { /* ... Hybrid EV, as before ... */ 
+    function calculateStatsForSingleAnalysis(analysisSpec, unitsInCurrentBanner, stepsInCurrentBanner, maxMultisForBannerGraph, bannerNameForLabel) {
         const dataPoints = [];
         let cumulativeProbNotPullCurrent = 1.0;
         let totalGemsSpentCurrent = 0;
         let expectedValueGems = 0;
         const fullAnalysisName = `${bannerNameForLabel} - ${analysisSpec.name}`;
 
-        // Loop for graph data points, up to the banner's specified totalMultis
         for (let k = 1; k <= maxMultisForBannerGraph; k++) { 
             let effBr = 0, effFpr = 0, costMK = 50;
             if (analysisSpec.type === "single_unit") { 
                 const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, k, unitsInCurrentBanner, stepsInCurrentBanner);
                 effBr = r.br; effFpr = r.fpr; costMK = r.cost;
             } else if (analysisSpec.type === "custom_group") { 
-                 let firstCost = false;
+                let firstCostSet = false; // Ensure cost is taken from the first relevant unit in group for the step
                 if (analysisSpec.constituents) {
                     analysisSpec.constituents.forEach(c => {
                         if (!c.unitId) return;
                         const r = getUnitRatesAndCostForMulti(c.unitId, k, unitsInCurrentBanner, stepsInCurrentBanner);
-                        const m = parseInt(c.multiplier) || 1;
-                        effBr += r.br * m; effFpr += r.fpr * m;
-                        if (!firstCost) { costMK = r.cost; firstCost = true; }
+                        const m = parseInt(c.multiplier) || 1; // Multiplier is for rate sum, not distinct pulls
+                        effBr += r.br * m; 
+                        effFpr += r.fpr * m;
+                        if (!firstCostSet) { costMK = r.cost; firstCostSet = true; }
                     });
                 }
             }
-            effBr = Math.min(effBr, 1.0); effFpr = Math.min(effFpr, 1.0);
+            effBr = Math.min(effBr, 1.0); // Cap summed rates at 100% for a single pull slot
+            effFpr = Math.min(effFpr, 1.0);
+
             totalGemsSpentCurrent += costMK;
-            const probNotPullRaw = Math.pow(1 - effBr, 10) * (1 - effFpr);
-            const probPullRaw = 1 - probNotPullRaw;
-            const probSuccessFirst = cumulativeProbNotPullCurrent * probPullRaw;
             
-            // EV Calculation Part (Hybrid)
-            if (cumulativeProbNotPullCurrent > 1e-12) { // Only add to EV if there's a chance to have failed up to this point
-                 expectedValueGems += totalGemsSpentCurrent * probSuccessFirst;
+            const probNotPullRawThisMulti = Math.pow(1 - effBr, 10) * (1 - effFpr);
+            const probPullRawThisMulti = 1 - probNotPullRawThisMulti;
+            
+            const probSuccessFirstTimeThisMulti = cumulativeProbNotPullCurrent * probPullRawThisMulti;
+            
+            if (cumulativeProbNotPullCurrent > 1e-12) { 
+                 expectedValueGems += totalGemsSpentCurrent * probSuccessFirstTimeThisMulti;
             }
 
-            cumulativeProbNotPullCurrent *= probNotPullRaw;
-            cumulativeProbNotPullCurrent = Math.max(0, Math.min(1, cumulativeProbNotPullCurrent));
+            cumulativeProbNotPullCurrent *= probNotPullRawThisMulti;
             
-            const effPulls = (totalGemsSpentCurrent / 50) * 11;
+            // --- NEW ROUNDING STEP ---
+            if ((1 - cumulativeProbNotPullCurrent) > PROBABILITY_THRESHOLD_FOR_100_PERCENT) {
+                cumulativeProbNotPullCurrent = 0.0; 
+            }
+            // --- END NEW ROUNDING STEP ---
+            
+            cumulativeProbNotPullCurrent = Math.max(0, Math.min(1, cumulativeProbNotPullCurrent)); // Sanitize bounds
+            
+            const effPullsEquivalent = (totalGemsSpentCurrent / 50) * 11; // Normalize cost to 50-gem/11-pull standard
             let normRate = 0;
-            if (effPulls > 0 && cumulativeProbNotPullCurrent < 1) normRate = 1 - Math.pow(cumulativeProbNotPullCurrent, 1 / effPulls);
-            else if (cumulativeProbNotPullCurrent >= 1 && effPulls > 0) normRate = 0;
+
+            if (effPullsEquivalent > 0) {
+                if (cumulativeProbNotPullCurrent === 0.0) { // Guaranteed pull
+                    normRate = 1.0; // Effectively 100% normalized rate
+                } else if (cumulativeProbNotPullCurrent === 1.0) { // 0% chance of having pulled
+                    normRate = 0.0;
+                } else {
+                     // Avoid Math.pow(negative, non-integer) if cumulativeProbNotPullCurrent somehow became > 1 before sanitizing
+                    normRate = 1 - Math.pow(Math.max(0, cumulativeProbNotPullCurrent), 1 / effPullsEquivalent);
+                }
+            }
             
             dataPoints.push({ 
                 multi: k, 
                 probPullAtLeastOne: 1 - cumulativeProbNotPullCurrent, 
                 normalizedRate: normRate * 100,
             });
-
-            // If guaranteed for EV calculation, but graph points continue
-            if (cumulativeProbNotPullCurrent < 1e-9 && k >= maxMultisForBannerGraph) {
-                // This condition means that if it's guaranteed before maxMultisForBannerGraph,
-                // the loop for EV contribution essentially stops here for defined steps.
-                // The outer EV universal phase check will use this final cumulativeProbNotPullCurrent.
-            }
         }
 
-        // EV Phase 2 (Universal rates) - for EV calc beyond maxMultisForBannerGraph if not guaranteed
-        if (cumulativeProbNotPullCurrent > 1e-9) { 
+        // EV Phase 2 (Universal rates for pulls beyond defined steps if not already "guaranteed")
+        if (cumulativeProbNotPullCurrent > 1e-9) { // If not considered guaranteed by this point
             let uniBr = 0, uniFpr = 0;
+            // Get universal rates for the unit/group
             if (analysisSpec.type === "single_unit") { 
-                const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, -1, unitsInCurrentBanner, [], true);
+                const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, -1, unitsInCurrentBanner, [], true); // true for universal phase
                 uniBr = r.br; uniFpr = r.fpr;
             } else if (analysisSpec.type === "custom_group") { 
                 if (analysisSpec.constituents) {
@@ -142,78 +166,151 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             uniBr = Math.min(uniBr, 1.0); uniFpr = Math.min(uniFpr, 1.0);
+
             const probPullUniRaw = 1 - (Math.pow(1 - uniBr, 10) * (1 - uniFpr));
-            if (probPullUniRaw > 1e-9) {
-                const evAddUni = 50 / probPullUniRaw;
-                expectedValueGems += cumulativeProbNotPullCurrent * (totalGemsSpentCurrent + evAddUni);
-            } else if (cumulativeProbNotPullCurrent > 1e-9){ // If universal rate is 0 and still not pulled
-                expectedValueGems = Infinity; // Mark as effectively never
+
+            if (probPullUniRaw > 1e-9) { // If there's a non-zero chance to pull in universal phase
+                const evAdditionalGemsPerUniversalSuccess = 50 / probPullUniRaw; // Avg cost per success in uni phase
+                // Add the expected cost for remaining probability, considering gems already spent
+                expectedValueGems += cumulativeProbNotPullCurrent * (totalGemsSpentCurrent + evAdditionalGemsPerUniversalSuccess);
+            } else if (cumulativeProbNotPullCurrent > 1e-9){ // Still not pulled, and universal rate is 0
+                expectedValueGems = Infinity; 
             }
+        } else if (expectedValueGems === 0 && (1 - cumulativeProbNotPullCurrent) < 1e-9) {
+            // If EV is 0 because cumulativeProbNotPullCurrent was 1.0 throughout, and never pulled
+             expectedValueGems = Infinity;
         }
+
+
         return { 
             fullAnalysisName, bannerName: bannerNameForLabel, originalAnalysisName: analysisSpec.name,
             data: dataPoints, color: getNextColor(fullAnalysisName), 
-            expectedValueGems: (expectedValueGems > 0 && (1 - cumulativeProbNotPullCurrent) > 1e-11 ) ? expectedValueGems : Infinity 
+            // Ensure EV is Infinity if overall probability of pull is extremely low
+            expectedValueGems: ((1 - cumulativeProbNotPullCurrent) > 1e-9 && expectedValueGems > 0) ? expectedValueGems : Infinity 
         };
     }
     
-    function generateDetailedMultiDataForCSV(analysisSpec, unitsInBanner, stepsInBanner, maxMultisForCSV, bannerName) { /* ... as before ... */ 
+    function generateDetailedMultiDataForCSV(analysisSpec, unitsInBanner, stepsInBanner, maxMultisForCSV, bannerName) {
         const multiHeaders = [`${bannerName} - ${analysisSpec.name}`];
         for (let i = 1; i <= maxMultisForCSV; i++) multiHeaders.push(`Multi ${i}`);
-        const cumulativeProbNotPullArray = ["Cumulative P(No Pull)"], probSuccessThisMultiArray = ["P(1st Success this Multi)"], conditionalEVArray = ["Cond. Avg. Cost from this Multi"], cumulativeGemsSpentArray = ["Cumulative Gems Spent"];
-        const preCalc = { totalGemsSpent: [0], probNotPullRaw: [0], probPullRaw: [0], probFirstSuccess: [0], cumulativeProbNotPull: [1.0] };
+        
+        const cumulativeProbNotPullArray = ["Cumulative P(No Pull)"];
+        const probSuccessThisMultiArray = ["P(1st Success this Multi)"];
+        const conditionalEVArray = ["Cond. Avg. Cost from this Multi"];
+        const cumulativeGemsSpentArray = ["Cumulative Gems Spent"];
+
+        // Pre-calculate rates and costs for each multi to build the detailed table
+        const preCalc = { 
+            totalGemsSpent: [0], // totalGemsSpent[j] is gems spent up to AND INCLUDING multi j
+            probNotPullRawThisMulti: [0], // probNotPullRawThisMulti[j] is P(no pull) for multi j itself
+            probPullRawThisMulti: [0],    // probPullRawThisMulti[j] is P(pull) for multi j itself
+            probFirstSuccessThisMulti: [0], // probFirstSuccessThisMulti[j] is P(1st success occurs AT multi j)
+            cumulativeProbNotPull: [1.0]  // cumulativeProbNotPull[j] is P(no pull up to AND INCLUDING multi j)
+        };
+
         for (let j = 1; j <= maxMultisForCSV; j++) {
             let effBr = 0, effFpr = 0, costMJ = 50;
-            let maxDefinedMulti = Math.max(...stepsInBanner.flatMap(s => Array.isArray(s.appliesToMultis) ? s.appliesToMultis : [] ), 0);
-            let isUni = j > maxDefinedMulti;
+            
+            // Determine if this multi 'j' is beyond defined steps (i.e., should use universal rates)
+            let maxDefinedMultiForStepLogic = 0;
+            if (stepsInBanner && stepsInBanner.length > 0) {
+                 maxDefinedMultiForStepLogic = Math.max(...stepsInBanner.flatMap(s => Array.isArray(s.appliesToMultis) ? s.appliesToMultis : [] ), 0);
+            }
+            let isUniversalPhaseForThisMulti = j > maxDefinedMultiForStepLogic && maxDefinedMultiForStepLogic > 0;
+            if (stepsInBanner.length === 0) isUniversalPhaseForThisMulti = true; // if no steps defined, all are universal
+
+
             if (analysisSpec.type === "single_unit") { 
-                const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, j, unitsInBanner, stepsInBanner, isUni);
+                const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, j, unitsInBanner, stepsInBanner, isUniversalPhaseForThisMulti);
                 effBr = r.br; effFpr = r.fpr; costMJ = r.cost;
             } else if (analysisSpec.type === "custom_group") { 
-                let firstCost = false;
+                let firstCostSet = false;
                 if(analysisSpec.constituents) {
                     analysisSpec.constituents.forEach(c => {
                         if(!c.unitId) return;
-                        const r = getUnitRatesAndCostForMulti(c.unitId, j, unitsInBanner, stepsInBanner, isUni);
+                        const r = getUnitRatesAndCostForMulti(c.unitId, j, unitsInBanner, stepsInBanner, isUniversalPhaseForThisMulti);
                         const m = parseInt(c.multiplier) || 1;
                         effBr += r.br * m; effFpr += r.fpr * m;
-                        if(!firstCost) { costMJ = r.cost; firstCost = true; }
+                        if(!firstCostSet) { costMJ = r.cost; firstCostSet = true; }
                     });
                 }
             }
-            effBr = Math.min(effBr, 1.0); effFpr = Math.min(effFpr, 1.0);
+            effBr = Math.min(effBr, 1.0); 
+            effFpr = Math.min(effFpr, 1.0);
+
             preCalc.totalGemsSpent[j] = (preCalc.totalGemsSpent[j-1] || 0) + costMJ;
-            preCalc.probNotPullRaw[j] = Math.pow(1 - effBr, 10) * (1 - effFpr);
-            preCalc.probPullRaw[j] = 1 - preCalc.probNotPullRaw[j];
-            preCalc.probFirstSuccess[j] = (preCalc.cumulativeProbNotPull[j-1] || 0) * preCalc.probPullRaw[j];
-            preCalc.cumulativeProbNotPull[j] = (preCalc.cumulativeProbNotPull[j-1] || 0) * preCalc.probNotPullRaw[j];
-            preCalc.cumulativeProbNotPull[j] = Math.max(0, Math.min(1, preCalc.cumulativeProbNotPull[j]));
+            preCalc.probNotPullRawThisMulti[j] = Math.pow(1 - effBr, 10) * (1 - effFpr);
+            preCalc.probPullRawThisMulti[j] = 1 - preCalc.probNotPullRawThisMulti[j];
+            
+            // Prob of 1st success at multi j = P(no pull until j-1) * P(pull at multi j)
+            preCalc.probFirstSuccessThisMulti[j] = (preCalc.cumulativeProbNotPull[j-1] || 0) * preCalc.probPullRawThisMulti[j];
+            
+            // Cumulative P(no pull up to multi j) = P(no pull until j-1) * P(no pull at multi j)
+            preCalc.cumulativeProbNotPull[j] = (preCalc.cumulativeProbNotPull[j-1] || 0) * preCalc.probNotPullRawThisMulti[j];
+
+            // --- NEW ROUNDING STEP for CSV Data ---
+            if ((1 - preCalc.cumulativeProbNotPull[j]) > PROBABILITY_THRESHOLD_FOR_100_PERCENT) {
+                preCalc.cumulativeProbNotPull[j] = 0.0;
+                // If rounded to 0, it means success is guaranteed. No "first success" possible in subsequent multis.
+                // Adjust probFirstSuccessThisMulti for current 'j' if rounding makes it guaranteed here.
+                // This needs careful thought: if P(pull at j) was already high, rounding cumulative P(no pull) to 0
+                // might make P(1st success at j) appear as if it captured all remaining probability.
+                // The current P(1st success) calc is based on cumulative P(no pull *before* multi j).
+                // So if rounding makes cumulative P(no pull *after* multi j) zero, that's fine.
+                // We might also need to ensure that P(1st success) for *future* multis becomes 0 if already guaranteed.
+                // This is naturally handled if preCalc.cumulativeProbNotPull[j-1] (for the next iteration) becomes 0.
+            }
+            // --- END NEW ROUNDING STEP ---
+            preCalc.cumulativeProbNotPull[j] = Math.max(0, Math.min(1, preCalc.cumulativeProbNotPull[j])); // Sanitize
         }
+
+        // Now populate the output arrays for the CSV
         for (let k = 1; k <= maxMultisForCSV; k++) {
             cumulativeProbNotPullArray.push(preCalc.cumulativeProbNotPull[k].toFixed(7));
-            probSuccessThisMultiArray.push(preCalc.probFirstSuccess[k].toFixed(7));
+            // If cumulativeProbNotPull[k-1] was 0 (already guaranteed), then probFirstSuccessThisMulti[k] will be 0.
+            probSuccessThisMultiArray.push(preCalc.probFirstSuccessThisMulti[k].toFixed(7));
             cumulativeGemsSpentArray.push(preCalc.totalGemsSpent[k]);
-            let sumNum = 0;
+
+            // Conditional EV: Expected additional gems to spend FROM THIS POINT (multi k) onwards,
+            // GIVEN that the unit has NOT been pulled before multi k.
+            let sumWeightedCostsFromK = 0;
+            let sumProbsOfFirstSuccessFromK = 0;
+
+            // Calculate sum(TotalGemsSpent[j] * P(1st success at j)) for j from k to MAX_MULTIS_FOR_CSV
+            // and sum(P(1st success at j)) for j from k to MAX_MULTIS_FOR_CSV
             for (let j = k; j <= maxMultisForCSV; j++) {
-                if (preCalc.probFirstSuccess[j] > 1e-12) sumNum += preCalc.totalGemsSpent[j] * preCalc.probFirstSuccess[j];
+                if (preCalc.probFirstSuccessThisMulti[j] > 1e-12) { // Only consider if there's a chance
+                    sumWeightedCostsFromK += preCalc.totalGemsSpent[j] * preCalc.probFirstSuccessThisMulti[j];
+                    sumProbsOfFirstSuccessFromK += preCalc.probFirstSuccessThisMulti[j];
+                }
             }
-            const probFailK_1 = (k === 1) ? 1.0 : preCalc.cumulativeProbNotPull[k-1];
-            const gemsK_1 = (k === 1) ? 0 : preCalc.totalGemsSpent[k-1];
-            let condEVk = "N/A";
-            if (probFailK_1 > 1e-12) condEVk = ((sumNum / probFailK_1) - gemsK_1).toFixed(1);
-            else if (preCalc.cumulativeProbNotPull[k-1] < 1e-9) condEVk = "0.0";
-            conditionalEVArray.push(condEVk);
+            
+            const probNotPulledBeforeK = (k === 1) ? 1.0 : preCalc.cumulativeProbNotPull[k-1];
+            const gemsSpentBeforeK = (k === 1) ? 0 : preCalc.totalGemsSpent[k-1];
+            let condEVkValue = "N/A";
+
+            if (probNotPulledBeforeK < 1e-9) { // Effectively guaranteed before multi k, or impossible to reach k unpulled.
+                condEVkValue = "0.0"; // No additional cost needed if already pulled.
+            } else if (sumProbsOfFirstSuccessFromK < 1e-9 && probNotPulledBeforeK > 1e-9) {
+                // Not pulled before k, but no chance of pulling from k onwards within CSV limit
+                condEVkValue = "Effectively Never (within CSV limit)";
+            } else if (sumProbsOfFirstSuccessFromK > 1e-9) {
+                // Expected total gems IF NOT PULLED BEFORE K = sumWeightedCostsFromK / probNotPulledBeforeK
+                // Conditional EV = (Expected total gems IF NOT PULLED BEFORE K) - GemsSpentBeforeK
+                const expectedTotalCostIfUnpulledAtK = sumWeightedCostsFromK / probNotPulledBeforeK;
+                condEVkValue = (expectedTotalCostIfUnpulledAtK - gemsSpentBeforeK).toFixed(1);
+            }
+             conditionalEVArray.push(condEVkValue);
         }
         return [multiHeaders, cumulativeGemsSpentArray, cumulativeProbNotPullArray, probSuccessThisMultiArray, conditionalEVArray];
     }
 
     // --- Process each banner for display (checklist, etc.) ---
     allBannerData.forEach(banner => { 
-        // Use banner.totalMultis for display graph extent for this banner's analyses
         const maxMultisForThisBannerGraph = parseInt(banner.totalMultis) || 30; 
         
         const bannerChecklistGroup = document.createElement('div');
-        bannerChecklistGroup.className = 'banner-checklist-group card';
+        bannerChecklistGroup.className = 'banner-checklist-group card'; // Added 'card' for consistency
         const bannerHeader = document.createElement('h4'); 
         bannerHeader.textContent = banner.bannerName;
         bannerChecklistGroup.appendChild(bannerHeader);
@@ -225,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     allCalculatedResults.push(result); 
 
                     const checkboxId = `check-${result.fullAnalysisName.replace(/[^a-zA-Z0-9]/g, '-')}`;
-                    const listItem = document.createElement('span'); 
+                    const listItem = document.createElement('span'); // Changed from div to span for inline-flex behavior
                     const label = document.createElement('label'); 
                     label.htmlFor = checkboxId;
                     
@@ -233,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     checkbox.type = 'checkbox'; checkbox.id = checkboxId; checkbox.value = result.fullAnalysisName;
                     checkbox.checked = true; checkbox.addEventListener('change', updateChart);
                     label.appendChild(checkbox);
-                    label.appendChild(document.createTextNode(` ${analysisSpec.name} `)); // Use original name for checklist
+                    label.appendChild(document.createTextNode(` ${analysisSpec.name} `)); 
                     
                     const evDisplay = document.createElement('span'); 
                     evDisplay.className = 'ev-display';
@@ -250,7 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
-        if (bannerChecklistGroup.children.length > 1) { // Only append if it has content beyond the header
+        if (bannerChecklistGroup.children.length > 1) { 
              checklistParentContainer.appendChild(bannerChecklistGroup);
         }
     });
@@ -267,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (selectedRateTypeKey === 'normalizedRate') {
             let maxRelevantRate = 0;
             let hasAnyRelevantRate = false;
-            let allAreEffectivelyZero = true;
+            let allAreEffectivelyZeroOrHundred = true; // Assume this initially
             let hasHundredPercent = false;
 
             selectedFullAnalysisNames.forEach(fullName => {
@@ -275,37 +372,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (resultObj && resultObj.data) {
                     resultObj.data.forEach(d => {
                         const rate = d.normalizedRate;
-                        if (rate > 0.001) allAreEffectivelyZero = false;
-                        if (Math.abs(rate - 100) < 0.001) hasHundredPercent = true;
-
-                        if (rate > 0.001 && rate < 99.99) { 
+                        if (Math.abs(rate - 100) < 0.001) {
+                            hasHundredPercent = true;
+                        } else if (rate > 0.001) { // Not 100 and not effectively 0
+                            allAreEffectivelyZeroOrHundred = false;
                             maxRelevantRate = Math.max(maxRelevantRate, rate);
                             hasAnyRelevantRate = true;
+                        } else { // Effectively 0
+                           // allAreEffectivelyZeroOrHundred remains true if it was already
                         }
                     });
                 }
             });
-
-            if (hasAnyRelevantRate) {
-                let padding = Math.max(0.15 * maxRelevantRate, 0.5); // 15% or 0.5 points
-                if (maxRelevantRate < 2) padding = Math.max(padding, 0.2); // smaller padding for tiny rates
+            
+            if (hasAnyRelevantRate) { // There are rates between 0 and 100 (exclusive of 100)
+                let padding = Math.max(0.15 * maxRelevantRate, 0.5); 
+                if (maxRelevantRate < 2) padding = Math.max(padding, 0.2);
                 yAxisConfiguredMax = Math.ceil(maxRelevantRate + padding);
-                yAxisConfiguredMax = Math.min(yAxisConfiguredMax, 100); // Cap at 100
-                if (maxRelevantRate < 1) yAxisConfiguredMax = Math.max(yAxisConfiguredMax, 1); // Ensure at least 0-1% scale
-            } else if (hasHundredPercent && allAreEffectivelyZero) { // Only 0s and 100s
+                yAxisConfiguredMax = Math.min(yAxisConfiguredMax, 100); 
+                if (maxRelevantRate < 1) yAxisConfiguredMax = Math.max(yAxisConfiguredMax, 1);
+            } else if (hasHundredPercent) { // Only 0s and 100s, or just 100s
                  yAxisConfiguredMax = 100;
-            } else if (hasHundredPercent) { // Only 100s (and maybe 0s)
-                 yAxisConfiguredMax = 100;
-            } else if (allAreEffectivelyZero) {
-                yAxisConfiguredMax = 1; // If all are 0, show a 0-1% scale
-            } else {
-                yAxisConfiguredMax = 10; // Default fallback if other conditions not met
+            } else { // All effectively zero
+                yAxisConfiguredMax = 1; 
             }
         } else if (selectedRateTypeKey === 'probPullAtLeastOne') {
             yAxisConfiguredMax = 100; 
         }
 
-        selectedFullAnalysisNames.forEach(analysisName => { /* ... as before ... */ 
+        selectedFullAnalysisNames.forEach(analysisName => { 
             const resultObj = allCalculatedResults.find(r => r.fullAnalysisName === analysisName);
             if (resultObj && resultObj.data) {
                 datasets.push({
@@ -321,7 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const data = { datasets: datasets };
-        // X-AXIS: Determined by the maximum 'totalMultis' specified by the user across all banners
         const xAxisMaxMultis = Math.max(...allBannerData.map(b => parseInt(b.totalMultis) || 0), 30);
 
         const config = {
@@ -335,9 +429,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         type: 'linear',
                         title: { display: true, text: 'Multi Number', font: {size: 14, weight: 'bold'} },
                         min: 1,
-                        max: xAxisMaxMultis, // Ensure x-axis goes up to the max defined multi
+                        max: xAxisMaxMultis, 
                         ticks: { 
-                            stepSize: Math.max(1, Math.floor(xAxisMaxMultis / 20)),
+                            stepSize: Math.max(1, Math.floor(xAxisMaxMultis / 20)), // Dynamic step size
                             font: {size: 12}
                         }
                     },
@@ -346,26 +440,25 @@ document.addEventListener('DOMContentLoaded', () => {
                         beginAtZero: true, min: 0,
                         max: yAxisConfiguredMax, 
                         ticks: {
-                            callback: function(value) { return value.toFixed(2) + '%'; },
+                            callback: function(value) { return value.toFixed(selectedRateTypeKey === 'normalizedRate' && yAxisConfiguredMax <= 5 ? 2 : (yAxisConfiguredMax <=1 ? 2:0)) + '%'; }, // More precision for small scales
                             font: {size: 12}
                         }
                     }
                 },
                 plugins: {
-                    legend: { display: false }, // Legend controlled by checkboxes
-                    tooltip: { /* as before */ }
-                }
-            }
-        };
-        config.options.plugins.tooltip = { /* ... as before ... */ 
-            enabled: true, mode: 'index', intersect: false, titleFont: {size: 14}, bodyFont: {size: 12},
-            callbacks: {
-                title: function(tooltipItems) { return `Multi: ${tooltipItems[0].label}`; },
-                label: function(context) {
-                    let displayLabel = context.dataset.label.split(' - ').pop() || context.dataset.label;
-                    if (displayLabel) displayLabel += ': ';
-                    if (context.parsed.y !== null) displayLabel += context.parsed.y.toFixed(3) + '%';
-                    return displayLabel;
+                    legend: { display: false }, 
+                    tooltip: { 
+                        enabled: true, mode: 'index', intersect: false, titleFont: {size: 14}, bodyFont: {size: 12},
+                        callbacks: {
+                            title: function(tooltipItems) { return `Multi: ${tooltipItems[0].label}`; },
+                            label: function(context) {
+                                let displayLabel = context.dataset.label.split(' - ').pop() || context.dataset.label; // Show only unit/group name part
+                                if (displayLabel) displayLabel += ': ';
+                                if (context.parsed.y !== null) displayLabel += context.parsed.y.toFixed(3) + '%';
+                                return displayLabel;
+                            }
+                        }
+                    }
                 }
             }
         };
@@ -383,7 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chartContainerOuter) chartContainerOuter.innerHTML = "<p>Not enough data to render chart. Please check your inputs or ensure units/analyses are defined and valid for at least one banner.</p>";
     }
 
-    downloadDetailCsvBtn.addEventListener('click', () => { /* ... as before ... */ 
+    downloadDetailCsvBtn.addEventListener('click', () => { 
         let csvContent = "";
         allBannerData.forEach(banner => {
             if (banner.analysesToPerformOnResultsPage) {
@@ -398,9 +491,8 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerCsvDownload(csvContent, "sugofest_detailed_analysis.csv");
     });
 
-    downloadGraphCsvBtn.addEventListener('click', () => { /* ... as before ... */ 
+    downloadGraphCsvBtn.addEventListener('click', () => { 
         let csvContent = "";
-        // Use the same xAxisMaxMultis for graph CSV consistency
         const xAxisMaxMultisForGraphCsv = Math.max(...allBannerData.map(b => parseInt(b.totalMultis) || 0), 30);
         let firstAnalysisBlock = true;
         allCalculatedResults.forEach(resultObj => {
@@ -420,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dataPoint) {
                     normRateRow.push(dataPoint.normalizedRate.toFixed(3));
                     cumPullRow.push((dataPoint.probPullAtLeastOne * 100).toFixed(3));
-                } else {
+                } else { // Fill with empty if no data point (e.g. graph shorter than max multis)
                     normRateRow.push(""); cumPullRow.push("");
                 }
             }
@@ -431,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerCsvDownload(csvContent, "sugofest_graph_data.csv");
     });
 
-    function triggerCsvDownload(csvContent, fileName) { /* ... as before ... */ 
+    function triggerCsvDownload(csvContent, fileName) { 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         if (link.download !== undefined) {
@@ -442,7 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { alert("CSV download not supported."); }
     }
 
-    function escapeCsvCell(cellData) { /* ... as before ... */ 
+    function escapeCsvCell(cellData) { 
         if (cellData === null || cellData === undefined) return "";
         let cellString = String(cellData);
         if (cellString.search(/("|,|\n)/g) >= 0) cellString = '"' + cellString.replace(/"/g, '""') + '"';
@@ -451,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 }); 
 
-function getYAxisLabel(rateTypeKey) { /* ... as before ... */ 
+function getYAxisLabel(rateTypeKey) { 
     switch(rateTypeKey) {
         case "normalizedRate": return "Normalized Rate (%)";
         case "probPullAtLeastOne": return "Cumulative Pull Chance (%)";
