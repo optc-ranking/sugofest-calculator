@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const unit = unitsInCurrentBanner.find(u => u.id === unitId);
         if (!unit) return { br: 0, fpr: 0, cost: 50, isUniversal: forUniversalPhase };
         const universalBr = (parseFloat(unit.universalBaseRate) || 0) / 100;
-        const universalFpr = (parseFloat(unit.universalBaseRate) || 0) / 100; // Universal implies same rate for all 11
+        const universalFpr = (parseFloat(unit.universalBaseRate) || 0) / 100; 
         
         if (forUniversalPhase) return { br: universalBr, fpr: universalFpr, cost: 50, isUniversal: true };
 
@@ -63,18 +63,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 stepApplied = true;
                 const unitStepOverride = unit.stepOverrides.find(so => so.globalStepDefId === stepDef.id);
                 if (unitStepOverride) {
-                    // Use specific override if present, otherwise fallback to universal FOR THAT STEP'S CONTEXT (before falling back to true universal)
                     br = unitStepOverride.hasOwnProperty('baseRate10Pulls') ? (parseFloat(unitStepOverride.baseRate10Pulls) || 0) / 100 : universalBr;
                     fpr = unitStepOverride.hasOwnProperty('finalPosterRate') ? (parseFloat(unitStepOverride.finalPosterRate) || 0) / 100 : universalFpr;
                 } else {
-                    // If no specific override for this unit on this step, it uses its universal rate
                     br = universalBr;
                     fpr = universalFpr;
                 }
-                break;  // Step found and applied
+                break;  
             }
         }
-        // If no step applied to this multiNumber, it's a "universal" phase for this multi (default rates/cost)
         return { br, fpr, cost, isUniversal: !stepApplied };
     }
 
@@ -91,19 +88,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, k, unitsInCurrentBanner, stepsInCurrentBanner);
                 effBr = r.br; effFpr = r.fpr; costMK = r.cost;
             } else if (analysisSpec.type === "custom_group") { 
-                let firstCostSet = false; // Ensure cost is taken from the first relevant unit in group for the step
+                let firstCostSet = false; 
                 if (analysisSpec.constituents) {
                     analysisSpec.constituents.forEach(c => {
                         if (!c.unitId) return;
                         const r = getUnitRatesAndCostForMulti(c.unitId, k, unitsInCurrentBanner, stepsInCurrentBanner);
-                        const m = parseInt(c.multiplier) || 1; // Multiplier is for rate sum, not distinct pulls
+                        const m = parseInt(c.multiplier) || 1; 
                         effBr += r.br * m; 
                         effFpr += r.fpr * m;
                         if (!firstCostSet) { costMK = r.cost; firstCostSet = true; }
                     });
                 }
             }
-            effBr = Math.min(effBr, 1.0); // Cap summed rates at 100% for a single pull slot
+            effBr = Math.min(effBr, 1.0); 
             effFpr = Math.min(effFpr, 1.0);
 
             totalGemsSpentCurrent += costMK;
@@ -119,24 +116,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cumulativeProbNotPullCurrent *= probNotPullRawThisMulti;
             
-            // --- NEW ROUNDING STEP ---
             if ((1 - cumulativeProbNotPullCurrent) > PROBABILITY_THRESHOLD_FOR_100_PERCENT) {
                 cumulativeProbNotPullCurrent = 0.0; 
             }
-            // --- END NEW ROUNDING STEP ---
             
-            cumulativeProbNotPullCurrent = Math.max(0, Math.min(1, cumulativeProbNotPullCurrent)); // Sanitize bounds
+            cumulativeProbNotPullCurrent = Math.max(0, Math.min(1, cumulativeProbNotPullCurrent)); 
             
-            const effPullsEquivalent = (totalGemsSpentCurrent / 50) * 11; // Normalize cost to 50-gem/11-pull standard
+            const effPullsEquivalent = (totalGemsSpentCurrent / 50) * 11; 
             let normRate = 0;
 
             if (effPullsEquivalent > 0) {
-                if (cumulativeProbNotPullCurrent === 0.0) { // Guaranteed pull
-                    normRate = 1.0; // Effectively 100% normalized rate
-                } else if (cumulativeProbNotPullCurrent === 1.0) { // 0% chance of having pulled
+                if (cumulativeProbNotPullCurrent === 0.0) { 
+                    normRate = 1.0; 
+                } else if (cumulativeProbNotPullCurrent === 1.0) { 
                     normRate = 0.0;
                 } else {
-                     // Avoid Math.pow(negative, non-integer) if cumulativeProbNotPullCurrent somehow became > 1 before sanitizing
                     normRate = 1 - Math.pow(Math.max(0, cumulativeProbNotPullCurrent), 1 / effPullsEquivalent);
                 }
             }
@@ -148,12 +142,10 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // EV Phase 2 (Universal rates for pulls beyond defined steps if not already "guaranteed")
-        if (cumulativeProbNotPullCurrent > 1e-9) { // If not considered guaranteed by this point
+        if (cumulativeProbNotPullCurrent > 1e-9) { 
             let uniBr = 0, uniFpr = 0;
-            // Get universal rates for the unit/group
             if (analysisSpec.type === "single_unit") { 
-                const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, -1, unitsInCurrentBanner, [], true); // true for universal phase
+                const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, -1, unitsInCurrentBanner, [], true); 
                 uniBr = r.br; uniFpr = r.fpr;
             } else if (analysisSpec.type === "custom_group") { 
                 if (analysisSpec.constituents) {
@@ -169,23 +161,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const probPullUniRaw = 1 - (Math.pow(1 - uniBr, 10) * (1 - uniFpr));
 
-            if (probPullUniRaw > 1e-9) { // If there's a non-zero chance to pull in universal phase
-                const evAdditionalGemsPerUniversalSuccess = 50 / probPullUniRaw; // Avg cost per success in uni phase
-                // Add the expected cost for remaining probability, considering gems already spent
+            if (probPullUniRaw > 1e-9) { 
+                const evAdditionalGemsPerUniversalSuccess = 50 / probPullUniRaw; 
                 expectedValueGems += cumulativeProbNotPullCurrent * (totalGemsSpentCurrent + evAdditionalGemsPerUniversalSuccess);
-            } else if (cumulativeProbNotPullCurrent > 1e-9){ // Still not pulled, and universal rate is 0
+            } else if (cumulativeProbNotPullCurrent > 1e-9){ 
                 expectedValueGems = Infinity; 
             }
         } else if (expectedValueGems === 0 && (1 - cumulativeProbNotPullCurrent) < 1e-9) {
-            // If EV is 0 because cumulativeProbNotPullCurrent was 1.0 throughout, and never pulled
              expectedValueGems = Infinity;
         }
-
 
         return { 
             fullAnalysisName, bannerName: bannerNameForLabel, originalAnalysisName: analysisSpec.name,
             data: dataPoints, color: getNextColor(fullAnalysisName), 
-            // Ensure EV is Infinity if overall probability of pull is extremely low
             expectedValueGems: ((1 - cumulativeProbNotPullCurrent) > 1e-9 && expectedValueGems > 0) ? expectedValueGems : Infinity 
         };
     }
@@ -199,25 +187,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const conditionalEVArray = ["Cond. Avg. Cost from this Multi"];
         const cumulativeGemsSpentArray = ["Cumulative Gems Spent"];
 
-        // Pre-calculate rates and costs for each multi to build the detailed table
         const preCalc = { 
-            totalGemsSpent: [0], // totalGemsSpent[j] is gems spent up to AND INCLUDING multi j
-            probNotPullRawThisMulti: [0], // probNotPullRawThisMulti[j] is P(no pull) for multi j itself
-            probPullRawThisMulti: [0],    // probPullRawThisMulti[j] is P(pull) for multi j itself
-            probFirstSuccessThisMulti: [0], // probFirstSuccessThisMulti[j] is P(1st success occurs AT multi j)
-            cumulativeProbNotPull: [1.0]  // cumulativeProbNotPull[j] is P(no pull up to AND INCLUDING multi j)
+            totalGemsSpent: [0], 
+            probNotPullRawThisMulti: [0], 
+            probPullRawThisMulti: [0],    
+            probFirstSuccessThisMulti: [0], 
+            cumulativeProbNotPull: [1.0]  
         };
 
         for (let j = 1; j <= maxMultisForCSV; j++) {
             let effBr = 0, effFpr = 0, costMJ = 50;
             
-            // Determine if this multi 'j' is beyond defined steps (i.e., should use universal rates)
             let maxDefinedMultiForStepLogic = 0;
             if (stepsInBanner && stepsInBanner.length > 0) {
                  maxDefinedMultiForStepLogic = Math.max(...stepsInBanner.flatMap(s => Array.isArray(s.appliesToMultis) ? s.appliesToMultis : [] ), 0);
             }
             let isUniversalPhaseForThisMulti = j > maxDefinedMultiForStepLogic && maxDefinedMultiForStepLogic > 0;
-            if (stepsInBanner.length === 0) isUniversalPhaseForThisMulti = true; // if no steps defined, all are universal
+            if (stepsInBanner.length === 0) isUniversalPhaseForThisMulti = true; 
 
 
             if (analysisSpec.type === "single_unit") { 
@@ -241,45 +227,25 @@ document.addEventListener('DOMContentLoaded', () => {
             preCalc.totalGemsSpent[j] = (preCalc.totalGemsSpent[j-1] || 0) + costMJ;
             preCalc.probNotPullRawThisMulti[j] = Math.pow(1 - effBr, 10) * (1 - effFpr);
             preCalc.probPullRawThisMulti[j] = 1 - preCalc.probNotPullRawThisMulti[j];
-            
-            // Prob of 1st success at multi j = P(no pull until j-1) * P(pull at multi j)
             preCalc.probFirstSuccessThisMulti[j] = (preCalc.cumulativeProbNotPull[j-1] || 0) * preCalc.probPullRawThisMulti[j];
-            
-            // Cumulative P(no pull up to multi j) = P(no pull until j-1) * P(no pull at multi j)
             preCalc.cumulativeProbNotPull[j] = (preCalc.cumulativeProbNotPull[j-1] || 0) * preCalc.probNotPullRawThisMulti[j];
 
-            // --- NEW ROUNDING STEP for CSV Data ---
             if ((1 - preCalc.cumulativeProbNotPull[j]) > PROBABILITY_THRESHOLD_FOR_100_PERCENT) {
                 preCalc.cumulativeProbNotPull[j] = 0.0;
-                // If rounded to 0, it means success is guaranteed. No "first success" possible in subsequent multis.
-                // Adjust probFirstSuccessThisMulti for current 'j' if rounding makes it guaranteed here.
-                // This needs careful thought: if P(pull at j) was already high, rounding cumulative P(no pull) to 0
-                // might make P(1st success at j) appear as if it captured all remaining probability.
-                // The current P(1st success) calc is based on cumulative P(no pull *before* multi j).
-                // So if rounding makes cumulative P(no pull *after* multi j) zero, that's fine.
-                // We might also need to ensure that P(1st success) for *future* multis becomes 0 if already guaranteed.
-                // This is naturally handled if preCalc.cumulativeProbNotPull[j-1] (for the next iteration) becomes 0.
             }
-            // --- END NEW ROUNDING STEP ---
-            preCalc.cumulativeProbNotPull[j] = Math.max(0, Math.min(1, preCalc.cumulativeProbNotPull[j])); // Sanitize
+            preCalc.cumulativeProbNotPull[j] = Math.max(0, Math.min(1, preCalc.cumulativeProbNotPull[j])); 
         }
 
-        // Now populate the output arrays for the CSV
         for (let k = 1; k <= maxMultisForCSV; k++) {
             cumulativeProbNotPullArray.push(preCalc.cumulativeProbNotPull[k].toFixed(7));
-            // If cumulativeProbNotPull[k-1] was 0 (already guaranteed), then probFirstSuccessThisMulti[k] will be 0.
             probSuccessThisMultiArray.push(preCalc.probFirstSuccessThisMulti[k].toFixed(7));
             cumulativeGemsSpentArray.push(preCalc.totalGemsSpent[k]);
 
-            // Conditional EV: Expected additional gems to spend FROM THIS POINT (multi k) onwards,
-            // GIVEN that the unit has NOT been pulled before multi k.
             let sumWeightedCostsFromK = 0;
             let sumProbsOfFirstSuccessFromK = 0;
 
-            // Calculate sum(TotalGemsSpent[j] * P(1st success at j)) for j from k to MAX_MULTIS_FOR_CSV
-            // and sum(P(1st success at j)) for j from k to MAX_MULTIS_FOR_CSV
             for (let j = k; j <= maxMultisForCSV; j++) {
-                if (preCalc.probFirstSuccessThisMulti[j] > 1e-12) { // Only consider if there's a chance
+                if (preCalc.probFirstSuccessThisMulti[j] > 1e-12) { 
                     sumWeightedCostsFromK += preCalc.totalGemsSpent[j] * preCalc.probFirstSuccessThisMulti[j];
                     sumProbsOfFirstSuccessFromK += preCalc.probFirstSuccessThisMulti[j];
                 }
@@ -289,14 +255,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const gemsSpentBeforeK = (k === 1) ? 0 : preCalc.totalGemsSpent[k-1];
             let condEVkValue = "N/A";
 
-            if (probNotPulledBeforeK < 1e-9) { // Effectively guaranteed before multi k, or impossible to reach k unpulled.
-                condEVkValue = "0.0"; // No additional cost needed if already pulled.
+            if (probNotPulledBeforeK < 1e-9) { 
+                condEVkValue = "0.0"; 
             } else if (sumProbsOfFirstSuccessFromK < 1e-9 && probNotPulledBeforeK > 1e-9) {
-                // Not pulled before k, but no chance of pulling from k onwards within CSV limit
                 condEVkValue = "Effectively Never (within CSV limit)";
             } else if (sumProbsOfFirstSuccessFromK > 1e-9) {
-                // Expected total gems IF NOT PULLED BEFORE K = sumWeightedCostsFromK / probNotPulledBeforeK
-                // Conditional EV = (Expected total gems IF NOT PULLED BEFORE K) - GemsSpentBeforeK
                 const expectedTotalCostIfUnpulledAtK = sumWeightedCostsFromK / probNotPulledBeforeK;
                 condEVkValue = (expectedTotalCostIfUnpulledAtK - gemsSpentBeforeK).toFixed(1);
             }
@@ -310,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const maxMultisForThisBannerGraph = parseInt(banner.totalMultis) || 30; 
         
         const bannerChecklistGroup = document.createElement('div');
-        bannerChecklistGroup.className = 'banner-checklist-group card'; // Added 'card' for consistency
+        bannerChecklistGroup.className = 'banner-checklist-group card'; 
         const bannerHeader = document.createElement('h4'); 
         bannerHeader.textContent = banner.bannerName;
         bannerChecklistGroup.appendChild(bannerHeader);
@@ -322,7 +285,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     allCalculatedResults.push(result); 
 
                     const checkboxId = `check-${result.fullAnalysisName.replace(/[^a-zA-Z0-9]/g, '-')}`;
-                    const listItem = document.createElement('span'); // Changed from div to span for inline-flex behavior
+                    const listItem = document.createElement('span'); 
                     const label = document.createElement('label'); 
                     label.htmlFor = checkboxId;
                     
@@ -361,44 +324,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let yAxisConfiguredMax; 
 
+        // --- START OF UPDATED Y-AXIS LOGIC ---
         if (selectedRateTypeKey === 'normalizedRate') {
-            let maxRelevantRate = 0;
-            let hasAnyRelevantRate = false;
-            let allAreEffectivelyZeroOrHundred = true; // Assume this initially
-            let hasHundredPercent = false;
-
+            let maxDataValue = 0; 
+            let maxNonExtremeDataValue = 0; 
+            let hasAnyNonExtremeValue = false;
+        
             selectedFullAnalysisNames.forEach(fullName => {
                 const resultObj = allCalculatedResults.find(r => r.fullAnalysisName === fullName);
                 if (resultObj && resultObj.data) {
                     resultObj.data.forEach(d => {
                         const rate = d.normalizedRate;
-                        if (Math.abs(rate - 100) < 0.001) {
-                            hasHundredPercent = true;
-                        } else if (rate > 0.001) { // Not 100 and not effectively 0
-                            allAreEffectivelyZeroOrHundred = false;
-                            maxRelevantRate = Math.max(maxRelevantRate, rate);
-                            hasAnyRelevantRate = true;
-                        } else { // Effectively 0
-                           // allAreEffectivelyZeroOrHundred remains true if it was already
+                        maxDataValue = Math.max(maxDataValue, rate);
+        
+                        if (rate > 0.001 && rate < 99.999) { // Consider rates effectively >0 and <100
+                            maxNonExtremeDataValue = Math.max(maxNonExtremeDataValue, rate);
+                            hasAnyNonExtremeValue = true;
                         }
                     });
                 }
             });
-            
-            if (hasAnyRelevantRate) { // There are rates between 0 and 100 (exclusive of 100)
-                let padding = Math.max(0.15 * maxRelevantRate, 0.5); 
-                if (maxRelevantRate < 2) padding = Math.max(padding, 0.2);
-                yAxisConfiguredMax = Math.ceil(maxRelevantRate + padding);
+        
+            if (hasAnyNonExtremeValue) {
+                let topPaddingPercentage = 0.15; 
+                let minimumPaddingValue = 0.1;   
+        
+                if (maxNonExtremeDataValue < 1) {
+                    topPaddingPercentage = 0.25; 
+                    minimumPaddingValue = 0.05;
+                } else if (maxNonExtremeDataValue < 5) {
+                    topPaddingPercentage = 0.20;
+                    minimumPaddingValue = 0.1;
+                }
+        
+                let paddedMax = maxNonExtremeDataValue * (1 + topPaddingPercentage);
+                paddedMax = Math.max(paddedMax, maxNonExtremeDataValue + minimumPaddingValue); 
+        
+                if (paddedMax <= 0.5) yAxisConfiguredMax = Math.ceil(paddedMax * 20) / 20; 
+                else if (paddedMax <= 1) yAxisConfiguredMax = Math.ceil(paddedMax * 10) / 10; 
+                else if (paddedMax <= 2) yAxisConfiguredMax = Math.ceil(paddedMax * 4) / 4;   
+                else if (paddedMax <= 5) yAxisConfiguredMax = Math.ceil(paddedMax * 2) / 2;   
+                else if (paddedMax <= 10) yAxisConfiguredMax = Math.ceil(paddedMax);            
+                else yAxisConfiguredMax = Math.ceil(paddedMax / 5) * 5;                     
+        
+                yAxisConfiguredMax = Math.max(yAxisConfiguredMax, 0.1); 
                 yAxisConfiguredMax = Math.min(yAxisConfiguredMax, 100); 
-                if (maxRelevantRate < 1) yAxisConfiguredMax = Math.max(yAxisConfiguredMax, 1);
-            } else if (hasHundredPercent) { // Only 0s and 100s, or just 100s
-                 yAxisConfiguredMax = 100;
-            } else { // All effectively zero
-                yAxisConfiguredMax = 1; 
+        
+            } else { 
+                if (maxDataValue > 50) { 
+                    yAxisConfiguredMax = 100;
+                } else { 
+                    yAxisConfiguredMax = 1; 
+                }
             }
+        
         } else if (selectedRateTypeKey === 'probPullAtLeastOne') {
             yAxisConfiguredMax = 100; 
         }
+        // --- END OF UPDATED Y-AXIS LOGIC ---
+
 
         selectedFullAnalysisNames.forEach(analysisName => { 
             const resultObj = allCalculatedResults.find(r => r.fullAnalysisName === analysisName);
@@ -431,7 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         min: 1,
                         max: xAxisMaxMultis, 
                         ticks: { 
-                            stepSize: Math.max(1, Math.floor(xAxisMaxMultis / 20)), // Dynamic step size
+                            stepSize: Math.max(1, Math.floor(xAxisMaxMultis / 20)), 
                             font: {size: 12}
                         }
                     },
@@ -440,7 +424,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         beginAtZero: true, min: 0,
                         max: yAxisConfiguredMax, 
                         ticks: {
-                            callback: function(value) { return value.toFixed(selectedRateTypeKey === 'normalizedRate' && yAxisConfiguredMax <= 5 ? 2 : (yAxisConfiguredMax <=1 ? 2:0)) + '%'; }, // More precision for small scales
+                            callback: function(value) { 
+                                // Dynamic precision for y-axis ticks based on the configured max
+                                let precision = 0;
+                                if (yAxisConfiguredMax <= 0.5) precision = 2; // e.g. 0.05, 0.10
+                                else if (yAxisConfiguredMax <= 2) precision = 2; // e.g. 0.25, 0.50, 1.25
+                                else if (yAxisConfiguredMax <= 5) precision = 1; // e.g. 0.5, 1.0, 3.5
+                                else if (yAxisConfiguredMax <= 10 && yAxisConfiguredMax % 1 !== 0) precision = 1; // e.g. 7.5 if max is 7.5
+                                return value.toFixed(precision) + '%'; 
+                            },
                             font: {size: 12}
                         }
                     }
@@ -452,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         callbacks: {
                             title: function(tooltipItems) { return `Multi: ${tooltipItems[0].label}`; },
                             label: function(context) {
-                                let displayLabel = context.dataset.label.split(' - ').pop() || context.dataset.label; // Show only unit/group name part
+                                let displayLabel = context.dataset.label.split(' - ').pop() || context.dataset.label; 
                                 if (displayLabel) displayLabel += ': ';
                                 if (context.parsed.y !== null) displayLabel += context.parsed.y.toFixed(3) + '%';
                                 return displayLabel;
@@ -512,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dataPoint) {
                     normRateRow.push(dataPoint.normalizedRate.toFixed(3));
                     cumPullRow.push((dataPoint.probPullAtLeastOne * 100).toFixed(3));
-                } else { // Fill with empty if no data point (e.g. graph shorter than max multis)
+                } else { 
                     normRateRow.push(""); cumPullRow.push("");
                 }
             }
