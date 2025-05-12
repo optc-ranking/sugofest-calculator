@@ -1,5 +1,5 @@
 {
-  "lastModified": "2025-05-12T20:34:17.179Z",
+  "lastModified": "2025-05-12T21:02:03.973Z",
   "banners": [
     {
       "id": "banner-1747024805022-0yz7x4xbq",
@@ -114,37 +114,224 @@
           "id": "unit-1747024805022-a0qtaxzvz",
           "name": "Monster Trio or Kizaru",
           "universalBaseRate": "0.167",
-          "stepOverrides": []
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747024805022-pow8yf7cg",
+              "finalPosterRate": "0.5"
+            },
+            {
+              "globalStepDefId": "step-1747024840290-9ss17h0hw",
+              "finalPosterRate": "1.111"
+            },
+            {
+              "globalStepDefId": "step-1747081747001-kgedpxzoo",
+              "finalPosterRate": "3.333"
+            },
+            {
+              "globalStepDefId": "step-1747081765095-4lwgsy1l0",
+              "baseRate10Pulls": "1.111",
+              "finalPosterRate": "1.111"
+            },
+            {
+              "globalStepDefId": "step-1747081772454-xhrms23yo",
+              "finalPosterRate": "5"
+            },
+            {
+              "globalStepDefId": "step-1747081781798-eslpge449",
+              "finalPosterRate": "50",
+              "baseRate10Pulls": "0.167"
+            },
+            {
+              "globalStepDefId": "step-1747081776332-61zvmqe5j",
+              "baseRate10Pulls": "0.556",
+              "finalPosterRate": "0.556"
+            }
+          ]
         },
         {
           "id": "unit-1747024888258-le28jjes3",
           "name": "Nami",
           "universalBaseRate": "0.167",
-          "stepOverrides": []
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747024805022-pow8yf7cg",
+              "finalPosterRate": "0.5"
+            },
+            {
+              "globalStepDefId": "step-1747024840290-9ss17h0hw",
+              "finalPosterRate": "1.111"
+            },
+            {
+              "globalStepDefId": "step-1747081747001-kgedpxzoo",
+              "finalPosterRate": "3.333"
+            },
+            {
+              "globalStepDefId": "step-1747081765095-4lwgsy1l0",
+              "baseRate10Pulls": "1.111",
+              "finalPosterRate": "1.111"
+            },
+            {
+              "globalStepDefId": "step-1747081772454-xhrms23yo",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081781798-eslpge449",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081776332-61zvmqe5j",
+              "baseRate10Pulls": "0.556",
+              "finalPosterRate": "0.556"
+            }
+          ]
         },
         {
           "id": "unit-1747081822048-4f2mlecqf",
           "name": "PSY G5",
-          "universalBaseRate": "0.500",
-          "stepOverrides": []
+          "universalBaseRate": "0.3",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747024805022-pow8yf7cg",
+              "finalPosterRate": "0.9"
+            },
+            {
+              "globalStepDefId": "step-1747024840290-9ss17h0hw",
+              "finalPosterRate": "2"
+            },
+            {
+              "globalStepDefId": "step-1747081747001-kgedpxzoo",
+              "finalPosterRate": "6"
+            },
+            {
+              "globalStepDefId": "step-1747081765095-4lwgsy1l0",
+              "baseRate10Pulls": "2",
+              "finalPosterRate": "2"
+            },
+            {
+              "globalStepDefId": "step-1747081772454-xhrms23yo",
+              "finalPosterRate": "5"
+            },
+            {
+              "globalStepDefId": "step-1747081781798-eslpge449",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081776332-61zvmqe5j",
+              "baseRate10Pulls": "1",
+              "finalPosterRate": "1"
+            }
+          ]
         },
         {
           "id": "unit-1747081830240-akj19zx27",
           "name": "Rate-Boosted Legend",
-          "universalBaseRate": "0.500",
-          "stepOverrides": []
+          "universalBaseRate": "0.3",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747024805022-pow8yf7cg",
+              "finalPosterRate": "0.9"
+            },
+            {
+              "globalStepDefId": "step-1747024840290-9ss17h0hw",
+              "finalPosterRate": "2"
+            },
+            {
+              "globalStepDefId": "step-1747081747001-kgedpxzoo",
+              "finalPosterRate": "6"
+            },
+            {
+              "globalStepDefId": "step-1747081765095-4lwgsy1l0",
+              "baseRate10Pulls": "2",
+              "finalPosterRate": "2"
+            },
+            {
+              "globalStepDefId": "step-1747081772454-xhrms23yo",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081781798-eslpge449",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081776332-61zvmqe5j",
+              "baseRate10Pulls": "1",
+              "finalPosterRate": "1"
+            }
+          ]
         },
         {
           "id": "unit-1747081845065-021v2c175",
           "name": "Other Super Sugo Exclusive",
-          "universalBaseRate": "0.500",
-          "stepOverrides": []
+          "universalBaseRate": "0.022",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747024805022-pow8yf7cg",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747024840290-9ss17h0hw",
+              "finalPosterRate": "0.148"
+            },
+            {
+              "globalStepDefId": "step-1747081747001-kgedpxzoo",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081765095-4lwgsy1l0",
+              "baseRate10Pulls": "0.148",
+              "finalPosterRate": "0.148"
+            },
+            {
+              "globalStepDefId": "step-1747081772454-xhrms23yo",
+              "finalPosterRate": "2.361"
+            },
+            {
+              "globalStepDefId": "step-1747081781798-eslpge449",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081776332-61zvmqe5j",
+              "baseRate10Pulls": "0.074",
+              "finalPosterRate": "0.074"
+            }
+          ]
         },
         {
           "id": "unit-1747081861333-28nqk084h",
           "name": "Other Legends",
-          "universalBaseRate": "0.500",
-          "stepOverrides": []
+          "universalBaseRate": "0.046",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747024805022-pow8yf7cg",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747024840290-9ss17h0hw",
+              "finalPosterRate": "0.304"
+            },
+            {
+              "globalStepDefId": "step-1747081747001-kgedpxzoo",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081765095-4lwgsy1l0",
+              "baseRate10Pulls": "0.304",
+              "finalPosterRate": "0.304"
+            },
+            {
+              "globalStepDefId": "step-1747081772454-xhrms23yo",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081781798-eslpge449",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747081776332-61zvmqe5j",
+              "baseRate10Pulls": "0.152",
+              "finalPosterRate": "0.152"
+            }
+          ]
         }
       ],
       "customAnalyses": [
@@ -253,38 +440,6 @@
           ]
         }
       ]
-    },
-    {
-      "id": "banner-1747024922860-cuymmyk8y",
-      "name": "Part 2-6",
-      "totalMultis": 30,
-      "steps": [
-        {
-          "id": "step-1747024922862-oirfhz4dk",
-          "appliesToMultis": [
-            1,
-            2,
-            3,
-            4,
-            5
-          ],
-          "gemCost": 50
-        }
-      ],
-      "units": [
-        {
-          "id": "unit-1747024922862-f5iab3zbs",
-          "name": "Luffy",
-          "universalBaseRate": "0.500",
-          "stepOverrides": [
-            {
-              "globalStepDefId": "step-1747024922862-oirfhz4dk",
-              "finalPosterRate": "2"
-            }
-          ]
-        }
-      ],
-      "customAnalyses": []
     }
   ]
 }
