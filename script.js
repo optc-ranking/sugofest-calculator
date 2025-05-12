@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => { // Added async for await
+document.addEventListener('DOMContentLoaded', async () => { 
     // --- DOM Elements ---
     const bannerTabsContainer = document.getElementById('bannerTabsContainer');
     const activeBannerContent = document.getElementById('activeBannerContent');
@@ -7,8 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
     const renameBannerBtn = document.getElementById('renameBannerBtn');
     const deleteBannerBtn = document.getElementById('deleteBannerBtn');
     
-    // const calculateBtnLink = document.getElementById('calculateBtnLink'); // OLD: For single button
-    const calculateBtnLinks = document.querySelectorAll('.proceed-button'); // NEW: Selects all proceed buttons by class
+    const calculateBtnLinks = document.querySelectorAll('.proceed-button'); 
 
     const saveSetupNameInput = document.getElementById('saveSetupName');
     const saveNamedStateBtn = document.getElementById('saveNamedStateBtn');
@@ -35,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
     const SAVED_SETUPS_KEY = 'sugofestMultiBannerSetups_v2'; 
     const LAST_CALCULATED_STATE_KEY = '__last_calculated_banner_state_v2__';
     const DEFAULT_SETUPS_MANIFEST_PATH = 'default-setups-manifest.json';
+    const DEFAULT_RATE_STRING = "0.000";
 
 
     // --- UTILITY ---
@@ -95,9 +95,15 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         const newUnitData = unitDataToLoad || {
             id: newUnitId,
             name: unitName,
-            universalBaseRate: "0.500",
+            universalBaseRate: "0.500", // Default non-empty universal rate
             stepOverrides: []
         };
+        // Ensure universalBaseRate is valid if loading
+        if (unitDataToLoad && (typeof unitDataToLoad.universalBaseRate !== 'string' || unitDataToLoad.universalBaseRate.trim() === "")) {
+            newUnitData.universalBaseRate = "0.500";
+        }
+
+
         if (!unitDataToLoad) currentBanner.units.push(newUnitData);
         else if (!currentBanner.units.find(u => u.id === newUnitId)) currentBanner.units.push(newUnitData);
 
@@ -109,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         updateAllAnalysisConstituentUnitDropdowns();
     }
 
-    function addUnitStepRateEntryToUnit(unitBlockDOM, stepData, stepVisualIndex, savedOverride, universalRate) {
+    function addUnitStepRateEntryToUnit(unitBlockDOM, stepData, stepVisualIndex, savedOverride, universalRateForDisplay) {
         const ratesContainer = unitBlockDOM.querySelector('.unit-steps-rates-container');
         if (!ratesContainer) { console.error("Rates container not found for unit", unitBlockDOM); return; }
 
@@ -121,12 +127,13 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         
         const baseRateInput = entryElement.querySelector('.unit-step-base-rate');
         const finalPosterRateInput = entryElement.querySelector('.unit-step-final-poster-rate');
+
         if (savedOverride) {
-            baseRateInput.value = savedOverride.baseRate10Pulls;
-            finalPosterRateInput.value = savedOverride.finalPosterRate;
-        } else {
-            baseRateInput.value = universalRate;
-            finalPosterRateInput.value = universalRate;
+            baseRateInput.value = savedOverride.baseRate10Pulls || DEFAULT_RATE_STRING;
+            finalPosterRateInput.value = savedOverride.finalPosterRate || DEFAULT_RATE_STRING;
+        } else { 
+            baseRateInput.value = universalRateForDisplay; // This should be a valid number string like "0.500" or "0.000"
+            finalPosterRateInput.value = universalRateForDisplay;
         }
         ratesContainer.appendChild(entryElement);
     }
@@ -154,6 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                 const unitInModel = currentBanner.units.find(u => u.id === unitId);
                 if (unitInModel && !unitBlockDOM.querySelector(`.unit-step-rate-entry[data-step-ref-id="${newStepData.id}"]`)) {
                     const visualIndex = Array.from(container.children).length -1;
+                    // Pass unitInModel.universalBaseRate which should be a valid number string
                      addUnitStepRateEntryToUnit(unitBlockDOM, newStepData, visualIndex, null, unitInModel.universalBaseRate);
                 }
             });
@@ -176,12 +184,13 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         const blockElement = unitInstance.firstElementChild; 
         blockElement.dataset.unitId = unitData.id;
         blockElement.querySelector('.unit-name').value = unitData.name;
-        blockElement.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate;
+        blockElement.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate; // Should be valid string "0.500" etc.
         
         const ratesContainer = blockElement.querySelector('.unit-steps-rates-container');
         ratesContainer.innerHTML = ''; 
         stepsInBanner.forEach((step, index) => {
             const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
+            // Pass unitData.universalBaseRate for display if no override
             addUnitStepRateEntryToUnit(blockElement, step, index, override, unitData.universalBaseRate);
         });
         container.appendChild(blockElement);
@@ -189,8 +198,9 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
     
     function updateUnitStepRateDisplaysForBanner(unitsToUpdate, allStepsInBanner) {
         if (!activeBannerContent.querySelector('.banner-data-container')) return;
-        const currentBanner = findBannerById(activeBannerId);
-        if(!currentBanner) return;
+        const currentBanner = findBannerById(activeBannerId); // Not strictly needed if unitsToUpdate is self-contained
+        if(!currentBanner && unitsToUpdate.length === 0) return;
+
 
         unitsToUpdate.forEach(unitData => {
             const unitBlockDOM = activeBannerContent.querySelector(`.unit-block[data-unit-id="${unitData.id}"]`);
@@ -199,6 +209,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                 ratesContainer.innerHTML = ''; 
                 allStepsInBanner.forEach((step, index) => {
                     const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
+                    // unitData.universalBaseRate should be the definitive source for display here
                     addUnitStepRateEntryToUnit(unitBlockDOM, step, index, override, unitData.universalBaseRate);
                 });
             }
@@ -321,14 +332,26 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
             steps: [], units: [], customAnalyses: []
         };
         if (bannerToLoad) {
+            newBannerData.universalBaseRate = (bannerToLoad.universalBaseRate || "0.500").trim() === "" ? "0.500" : bannerToLoad.universalBaseRate;
             newBannerData.steps.forEach(s => s.id = s.id || generateUniqueId('step'));
-            newBannerData.units.forEach(u => u.id = u.id || generateUniqueId('unit'));
+            newBannerData.units.forEach(u => {
+                u.id = u.id || generateUniqueId('unit');
+                u.universalBaseRate = (u.universalBaseRate || "0.500").trim() === "" ? "0.500" : u.universalBaseRate;
+                u.stepOverrides = (u.stepOverrides || []).map(so => ({
+                    ...so,
+                    baseRate10Pulls: (so.baseRate10Pulls || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.baseRate10Pulls,
+                    finalPosterRate: (so.finalPosterRate || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.finalPosterRate,
+                }));
+            });
             newBannerData.customAnalyses = (newBannerData.customAnalyses || []).map(a => ({
                 ...a,
                 id: a.id || generateUniqueId('analysis'),
                 constituents: (a.constituents || []).map(c => ({ ...c, id: c.id || generateUniqueId('constituent') }))
             }));
+        } else {
+            newBannerData.universalBaseRate = "0.500"; // Default for brand new banners
         }
+
 
         banners.push(newBannerData);
         renderBannerTabs();
@@ -339,7 +362,8 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
             globalDefaultUnitNameCounter++;
             const defaultUnit = { 
                 id: generateUniqueId('unit'), name: `Unit ${globalDefaultUnitNameCounter}`, 
-                universalBaseRate: "0.500", stepOverrides: [] 
+                universalBaseRate: "0.500", 
+                stepOverrides: [] 
             };
             newBannerData.units.push(defaultUnit);
         }
@@ -458,10 +482,13 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
             const unitId = unitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
             if (unitData) {
-                const universalRate = unitBlock.querySelector('.unit-universal-base-rate').value;
-                unitData.universalBaseRate = universalRate;
-                unitData.stepOverrides = []; 
-                updateUnitStepRateDisplaysForBanner([unitData], currentBanner.steps);
+                let universalRateToApply = unitBlock.querySelector('.unit-universal-base-rate').value.trim();
+                if (universalRateToApply === "") {
+                    universalRateToApply = DEFAULT_RATE_STRING; // Use default if main universal input is empty
+                }
+                unitData.universalBaseRate = universalRateToApply; // Update model
+                unitData.stepOverrides = []; // Clear specific overrides in model
+                updateUnitStepRateDisplaysForBanner([unitData], currentBanner.steps); // Re-render step rates for this unit
             }
         }
         if (e.target.matches('.add-analysis-target-btn')) createNewAnalysisTargetForActiveBanner(null);
@@ -491,7 +518,9 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
     activeBannerContent.addEventListener('change', (e) => { 
         const currentBanner = findBannerById(activeBannerId);
         if (!currentBanner) return;
+
         if (e.target.matches('.total-multis-input')) currentBanner.totalMultis = parseInt(e.target.value) || 30;
+        
         const stepBlock = e.target.closest('.step-definition-block');
         if (stepBlock) { 
             const stepId = stepBlock.dataset.stepId;
@@ -509,8 +538,12 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
             const unitId = unitBlock.dataset.unitId;
             const unitData = currentBanner.units.find(u => u.id === unitId);
             if(unitData){
-                if (e.target.matches('.unit-name')) { unitData.name = e.target.value; updateAllAnalysisConstituentUnitDropdowns(); } 
-                else if (e.target.matches('.unit-universal-base-rate')) unitData.universalBaseRate = e.target.value;
+                if (e.target.matches('.unit-name')) { 
+                    unitData.name = e.target.value; 
+                    updateAllAnalysisConstituentUnitDropdowns(); 
+                } else if (e.target.matches('.unit-universal-base-rate')) {
+                    unitData.universalBaseRate = e.target.value.trim() === "" ? DEFAULT_RATE_STRING : e.target.value;
+                }
             }
         }
         const unitStepRateEntry = e.target.closest('.unit-step-rate-entry');
@@ -521,9 +554,16 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
             const stepRefId = unitStepRateEntry.dataset.stepRefId;
             if (unitData && stepRefId) {
                 let override = unitData.stepOverrides.find(so => so.globalStepDefId === stepRefId);
-                if (!override) { override = { globalStepDefId: stepRefId }; unitData.stepOverrides.push(override); }
-                if (e.target.matches('.unit-step-base-rate')) override.baseRate10Pulls = e.target.value;
-                if (e.target.matches('.unit-step-final-poster-rate')) override.finalPosterRate = e.target.value;
+                if (!override) { 
+                    override = { globalStepDefId: stepRefId }; 
+                    unitData.stepOverrides.push(override); 
+                }
+                if (e.target.matches('.unit-step-base-rate')) {
+                    override.baseRate10Pulls = e.target.value.trim() === "" ? DEFAULT_RATE_STRING : e.target.value;
+                }
+                if (e.target.matches('.unit-step-final-poster-rate')) {
+                    override.finalPosterRate = e.target.value.trim() === "" ? DEFAULT_RATE_STRING : e.target.value;
+                }
             }
         }
         const analysisBlock = e.target.closest('.analysis-target-block');
@@ -593,7 +633,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         
         if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) { 
             const bannersData = setupToLoad.data || setupToLoad; 
-            applyState(bannersData);
+            applyState(bannersData); // applyState will also sanitize loaded rates
             saveSetupNameInput.value = nameKey.startsWith("AUTOLOAD_") || nameKey.startsWith("FILEIMPORT_") ? 
                                         getFilenameWithoutExtension(setupToLoad.originalFilename || nameKey) : nameKey;
             alert(`Setup "${setupToLoad.displayName || nameKey}" loaded!`);
@@ -618,36 +658,62 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
         saveSetupNameInput.value = '';
     });
     
-    function getCurrentState() {
+    function getCurrentState() { 
+        // Banners array should already have sanitized rates (e.g. "0.000") due to on-change handlers
         return JSON.parse(JSON.stringify(banners)); 
     }
+    
+    // Sanitizes rates within a banners array upon loading
+    function sanitizeBannersData(bannersToProcess) {
+        return bannersToProcess.map(bannerData => ({
+            ...bannerData,
+            units: (bannerData.units || []).map(u => ({
+                ...u,
+                id: u.id || generateUniqueId('unit'),
+                universalBaseRate: (u.universalBaseRate || "0.500").trim() === "" ? "0.500" : u.universalBaseRate.trim(),
+                stepOverrides: (u.stepOverrides || []).map(so => ({
+                    ...so,
+                    baseRate10Pulls: (so.baseRate10Pulls || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.baseRate10Pulls.trim(),
+                    finalPosterRate: (so.finalPosterRate || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.finalPosterRate.trim(),
+                }))
+            })),
+            steps: (bannerData.steps || []).map(s => ({...s, id: s.id || generateUniqueId('step')})),
+            customAnalyses: (bannerData.customAnalyses || []).map(a => ({
+                ...a, 
+                id: a.id || generateUniqueId('analysis'),
+                constituents: (a.constituents || []).map(c => ({...c, id: c.id || generateUniqueId('constituent')}))
+            }))
+        }));
+    }
 
-    function applyState(bannersToLoad) {
+
+    function applyState(bannersToLoadRaw) {
         banners = []; activeBannerId = null; activeBannerContent.innerHTML = ''; globalDefaultUnitNameCounter = 0;
         
-        if (!Array.isArray(bannersToLoad)) {
-            console.error("Invalid state to apply: bannersToLoad is not an array.", bannersToLoad);
+        if (!Array.isArray(bannersToLoadRaw)) {
+            console.error("Invalid state to apply: bannersToLoad is not an array.", bannersToLoadRaw);
             alert("Error: The loaded setup data is invalid.");
             addBanner(null); 
             return;
         }
 
-        bannersToLoad.forEach(bannerData => {
-            const bannerId = bannerData.id || generateUniqueId('banner');
-            const loadedBanner = {
+        const sanitizedBannersToLoad = sanitizeBannersData(bannersToLoadRaw);
+
+        sanitizedBannersToLoad.forEach(bannerData => { // Use the sanitized data
+            // addBanner now expects bannerToLoad to be pre-sanitized if it comes from external source
+            // but its internal defaults still apply for truly new banners
+            const bannerId = bannerData.id || generateUniqueId('banner'); // Ensure ID
+            const loadedBanner = { // Construct the banner object to push, ensuring all parts are there
                 id: bannerId,
                 name: bannerData.name || `Banner ${banners.length + 1}`,
                 totalMultis: bannerData.totalMultis || 30,
-                steps: (bannerData.steps || []).map(s => ({...s, id: s.id || generateUniqueId('step')}) ),
-                units: (bannerData.units || []).map(u => ({...u, id: u.id || generateUniqueId('unit'), stepOverrides: u.stepOverrides || [] }) ),
-                customAnalyses: (bannerData.customAnalyses || []).map(a => ({
-                    ...a, 
-                    id: a.id || generateUniqueId('analysis'),
-                    constituents: (a.constituents || []).map(c => ({...c, id: c.id || generateUniqueId('constituent')}))
-                }))
+                steps: bannerData.steps, // Already processed by sanitizeBannersData
+                units: bannerData.units, // Already processed by sanitizeBannersData
+                customAnalyses: bannerData.customAnalyses // Already processed
             };
             banners.push(loadedBanner);
         });
+
 
         renderBannerTabs();
         if (banners.length > 0) {
@@ -700,7 +766,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                         displayName: displayName,
                         originalFilename: filename, 
                         lastModified: serverSetup.lastModified,
-                        data: serverSetup.banners
+                        data: sanitizeBannersData(serverSetup.banners) // Sanitize data from server files too
                     };
                     setupsModified = true;
                     console.log(`Auto-loaded server setup '${filename}' as '${displayName}'.`);
@@ -759,22 +825,23 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                 const displayName = `${baseFilename} (${new Date(importedSetup.lastModified).toLocaleString()})`;
                 let storageKey = `FILEIMPORT_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
                 let counter = 1;
-                const originalStorageKey = storageKey;
+                // const originalStorageKey = storageKey; // Not needed with current unique key logic
                 while(allSetups[`${storageKey}${counter > 1 ? '_'+counter : ''}`]) {
                     counter++;
                 }
                 storageKey = `${storageKey}${counter > 1 ? '_'+counter : ''}`;
 
+                const sanitizedBannersFromFile = sanitizeBannersData(importedSetup.banners);
 
                 allSetups[storageKey] = {
                     displayName: displayName,
                     originalFilename: file.name, 
                     lastModified: importedSetup.lastModified, 
-                    data: importedSetup.banners
+                    data: sanitizedBannersFromFile 
                 };
                 localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
                 
-                applyState(importedSetup.banners); 
+                applyState(sanitizedBannersFromFile); 
                 saveSetupNameInput.value = baseFilename; 
                 listSavedSetups(); 
                 loadSetupSelect.value = storageKey; 
@@ -801,14 +868,15 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                 })).filter(cg => cg.constituents && cg.constituents.length > 0);
                 return {
                     bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
-                    units: bannerData.units, stepDefinitions: bannerData.steps, 
+                    units: bannerData.units, // These units should already have sanitized rates
+                    stepDefinitions: bannerData.steps, 
                     analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
                 };
             }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
 
             if (dataForAllBanners.length === 0) { 
                 alert("No units or custom analysis groups are defined in any banner. Please add some to proceed."); 
-                e.preventDefault(); // Prevent navigation
+                e.preventDefault(); 
                 return; 
             }
             
@@ -836,7 +904,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                 try {
                     const stateToLoad = JSON.parse(lastStateJSON);
                     if (stateToLoad && stateToLoad.data && Array.isArray(stateToLoad.data)) {
-                        applyState(stateToLoad.data);
+                        applyState(stateToLoad.data); // applyState now sanitizes
                         console.log("Auto-loaded last calculated state (due to query param).");
                         if (window.history.replaceState) {
                             const cleanURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
@@ -854,7 +922,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
             const setupToLoad = allSetups[firstSetupKey];
 
             if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) {
-                applyState(setupToLoad.data || setupToLoad);
+                applyState(setupToLoad.data || setupToLoad); // applyState now sanitizes
                 saveSetupNameInput.value = firstSetupKey.startsWith("AUTOLOAD_") || firstSetupKey.startsWith("FILEIMPORT_") ? 
                                             getFilenameWithoutExtension(setupToLoad.originalFilename || firstSetupKey) : firstSetupKey;
                 loadSetupSelect.value = firstSetupKey;
@@ -869,7 +937,7 @@ document.addEventListener('DOMContentLoaded', async () => { // Added async for a
                  try {
                      const stateToLoad = JSON.parse(lastCalculatedStateJSON);
                      if (stateToLoad && stateToLoad.data && Array.isArray(stateToLoad.data)) {
-                         applyState(stateToLoad.data);
+                         applyState(stateToLoad.data); // applyState now sanitizes
                          console.log("Loaded from last calculated state (fallback).");
                          stateLoaded = true;
                      }
