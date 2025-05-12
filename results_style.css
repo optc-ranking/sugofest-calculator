@@ -74,6 +74,44 @@ main {
     outline: none;
 }
 
+/* Checklist bulk controls styling */
+.checklist-bulk-controls {
+    text-align: center; /* Center the buttons */
+    padding: 15px; /* Reduced padding compared to other cards */
+    margin-bottom: 20px; /* Space before checklist */
+}
+
+.checklist-bulk-controls button {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+/* Optional: A smaller version of utility buttons if needed */
+/* These utility buttons are also used for download, so style them consistently */
+.utility-button {
+    background-color: #3498db !important; /* Consistent blue */
+    color: white;
+    border: none;
+    padding: 12px 22px; /* Slightly larger buttons */
+    margin-top: 8px; 
+    margin-bottom: 8px; 
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+    display: inline-block; 
+}
+.utility-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px); /* Slight lift on hover */
+}
+.utility-button-small {
+    padding: 8px 15px !important; /* Override general utility for smaller ones */
+    font-size: 0.9em !important;
+}
+
+
 /* Checklist styling */
 #checklistContainerParent {
     padding-top: 10px; /* Space above first banner group */
@@ -103,6 +141,7 @@ main {
     cursor: pointer;
     transition: color 0.2s ease;
     font-size: 0.95em;
+    color: #3d3d3d; /* Ensure default label color is readable */
 }
 #checklistContainerParent .banner-checklist-group label:hover {
     color: #3498db; /* Blue on hover */
@@ -123,7 +162,8 @@ main {
     vertical-align: middle;
     border-radius: 3px; /* Slightly rounded swatch */
 }
-.checklist-container label .ev-display { 
+.checklist-container label .ev-display, /* Keep existing selector for backward compatibility if any */
+#checklistContainerParent .banner-checklist-group label .ev-display { /* More specific selector */
     font-size: 0.8em;
     color: #7f8c8d; /* Softer grey for EV */
     margin-left: 10px;
@@ -166,29 +206,17 @@ main {
     border: 0;
     border-top: 1px dashed #bdc3c7; /* Softer dashed line */
 }
-#downloadDetailCsvBtn, 
-#downloadGraphCsvBtn { 
-    background-color: #3498db !important; /* Consistent blue */
-    color: white;
-    border: none;
-    padding: 12px 22px; /* Slightly larger buttons */
-    margin-top: 8px; 
-    margin-bottom: 8px; 
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: 500;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-    display: inline-block; 
-}
-#downloadDetailCsvBtn:hover, 
-#downloadGraphCsvBtn:hover {
-    opacity: 0.9;
-    transform: translateY(-1px); /* Slight lift on hover */
+
+/* Ensure download buttons use the .utility-button styles by default */
+/* Specific overrides if needed: */
+#downloadDetailCsvBtn { 
+    /* Inherits .utility-button, specific overrides can go here if any */
+    /* e.g., background-color: #some-other-color !important; */
 }
 #downloadGraphCsvBtn { 
-    background-color: #9b59b6 !important; /* Purple for graph data */
+    background-color: #9b59b6 !important; /* Purple for graph data, keep this specific override */
 }
+
 
 a { color: #3498db; }
 a:hover { color: #2980b9; }

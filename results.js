@@ -4,6 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadDetailCsvBtn = document.getElementById('downloadDetailCsvBtn');
     const downloadGraphCsvBtn = document.getElementById('downloadGraphCsvBtn');
 
+    // NEW: Get references to Select/Deselect All buttons
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
+
+
     if (backToEntryLink) {
         backToEntryLink.href = "index.html?autoLoadLast=true";
     }
@@ -105,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totalGemsSpentCurrent += costMK;
             
             const probNotPullRawThisMulti = Math.pow(1 - effBr, 10) * (1 - effFpr);
-            const probPullRawThisMulti = 1 - probNotPullRawThisMulti; // Probability of success on this multi
+            const probPullRawThisMulti = 1 - probNotPullRawThisMulti; 
             
             const probSuccessFirstTimeThisMulti = cumulativeProbNotPullCurrent * probPullRawThisMulti;
             
@@ -138,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 multi: k, 
                 probPullAtLeastOne: 1 - cumulativeProbNotPullCurrent, 
                 normalizedRate: normRate * 100,
-                probSuccessOnThisMultiOnly: probPullRawThisMulti * 100 // Store as percentage
+                probSuccessOnThisMultiOnly: probPullRawThisMulti * 100 
             });
         }
 
@@ -333,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resultObj = allCalculatedResults.find(r => r.fullAnalysisName === fullName);
                 if (resultObj && resultObj.data) {
                     resultObj.data.forEach(d => {
-                        const rate = d[selectedRateTypeKey]; // Use the selected key directly
+                        const rate = d[selectedRateTypeKey]; 
                         maxDataValue = Math.max(maxDataValue, rate);
         
                         if (rate > 0.001 && rate < 99.999) { 
@@ -459,6 +464,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     rateTypeSelect.addEventListener('change', updateChart);
+
+    // --- NEW: Event Listeners for Select/Deselect All ---
+    if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+            const checkboxes = checklistParentContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateChart();
+        });
+    }
+
+    if (deselectAllBtn) {
+        deselectAllBtn.addEventListener('click', () => {
+            const checkboxes = checklistParentContainer.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateChart();
+        });
+    }
+    // --- END NEW ---
+
+
     if(allCalculatedResults.length > 0) { updateChart(); } 
     else { 
         const chartContainerOuter = document.getElementById('chartContainerOuter');
@@ -495,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             const normRateRow = ["Normalized Rate (%)"];
             const cumPullRow = ["Cumulative Pull Chance (%)"];
-            const singleMultiSuccessRow = ["Success Chance on This Multi (%)"]; // New CSV row
+            const singleMultiSuccessRow = ["Success Chance on This Multi (%)"]; 
 
             const dataByMulti = new Map();
             resultObj.data.forEach(d => dataByMulti.set(d.multi, d));
@@ -504,16 +529,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dataPoint) {
                     normRateRow.push(dataPoint.normalizedRate.toFixed(3));
                     cumPullRow.push((dataPoint.probPullAtLeastOne * 100).toFixed(3));
-                    singleMultiSuccessRow.push(dataPoint.probSuccessOnThisMultiOnly.toFixed(3)); // Add data
+                    singleMultiSuccessRow.push(dataPoint.probSuccessOnThisMultiOnly.toFixed(3)); 
                 } else { 
                     normRateRow.push(""); 
                     cumPullRow.push("");
-                    singleMultiSuccessRow.push(""); // Add empty cell
+                    singleMultiSuccessRow.push(""); 
                 }
             }
             csvContent += normRateRow.map(escapeCsvCell).join(",") + "\n";
             csvContent += cumPullRow.map(escapeCsvCell).join(",") + "\n";
-            csvContent += singleMultiSuccessRow.map(escapeCsvCell).join(",") + "\n"; // Add row to CSV
+            csvContent += singleMultiSuccessRow.map(escapeCsvCell).join(",") + "\n"; 
             csvContent += "\n"; 
         });
         triggerCsvDownload(csvContent, "sugofest_graph_data.csv");
@@ -543,7 +568,7 @@ function getYAxisLabel(rateTypeKey) {
     switch(rateTypeKey) {
         case "normalizedRate": return "Normalized Rate (%)";
         case "probPullAtLeastOne": return "Cumulative Pull Chance (%)";
-        case "probSuccessOnThisMultiOnly": return "High Value Multis (%)";
+        case "probSuccessOnThisMultiOnly": return "High Value Multis (%)"; // New label
         default: return "Value (%)";
     }
 }
