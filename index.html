@@ -25,7 +25,7 @@
             <button id="deleteNamedStateBtn" class="remove-button">Delete Selected</button>
         </div>
         <hr>
-        <h4>JSON Import / Export</h4>
+        <h4>JSON Import / Export / Infographic</h4>
         <div>
             <label for="importJsonInput">Import Setup from JSON file:</label>
             <input type="file" id="importJsonInput" accept=".json" style="width: auto;">
@@ -33,6 +33,11 @@
         </div>
         <div>
             <button id="exportJsonBtn" class="utility-button">Export Current Setup to JSON</button>
+        </div>
+        <div>
+            <label for="importImageInput">Upload Infographic Image:</label>
+            <input type="file" id="importImageInput" accept="image/*" style="width: auto;">
+            <button id="removeImageBtn" class="remove-button" style="display: none;">Remove Current Image</button>
         </div>
         <hr>
         <!-- START: New Proceed Button -->
@@ -44,6 +49,11 @@
         <!-- END: New Proceed Button -->
     </div>
     <hr>
+
+    <div id="infographicDisplayContainer" class="card" style="display: none;">
+        <img id="infographicImage" src="" alt="Infographic">
+    </div>
+    <!-- Banner Management will appear after this if an image is displayed, or directly after the HR if not -->
 
     <div class="card">
         <h2>Banner Management</h2>

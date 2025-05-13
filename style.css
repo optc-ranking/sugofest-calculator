@@ -249,3 +249,18 @@ label {
     margin-left: 0;
     margin-right: 0;
 }
+
+/* Infographic Display */
+#infographicDisplayContainer {
+    text-align: center; /* Centers the image if it's smaller than container */
+    padding: 10px; /* Some padding around the image */
+    margin-top: 25px; /* Ensure it has margin like other cards */
+}
+#infographicImage {
+    max-width: 100%; /* Responsive image */
+    max-height: 600px; /* Limit height to prevent overly large images */
+    display: block; /* Allows centering with margin: auto if needed, or works with text-align: center on parent */
+    margin: 0 auto; /* Centers block image */
+    border: 1px solid #ccc; /* Optional border */
+    border-radius: 4px; /* Optional rounded corners for the image */
+}

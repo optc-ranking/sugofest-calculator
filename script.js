@@ -19,6 +19,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const importJsonBtn = document.getElementById('importJsonBtn');
     const exportJsonBtn = document.getElementById('exportJsonBtn');
 
+    // Infographic DOM Elements
+    const importImageInput = document.getElementById('importImageInput');
+    const removeImageBtn = document.getElementById('removeImageBtn');
+    const infographicDisplayContainer = document.getElementById('infographicDisplayContainer');
+    const infographicImage = document.getElementById('infographicImage');
+
     // --- Templates ---
     const bannerContentTemplate = document.getElementById('bannerContentTemplate');
     const unitTemplate = document.getElementById('unitTemplate');
@@ -28,7 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const constituentUnitTemplate = document.getElementById('constituentUnitTemplate');
 
     // --- State ---
-    let banners = []; 
+    let appState = {
+        banners: [],
+        infographic: null // Will store the FILENAME (string) or null
+    };
     let activeBannerId = null;
     let globalDefaultUnitNameCounter = 0;
     const SAVED_SETUPS_KEY = 'sugofestMultiBannerSetups_v2'; 
@@ -49,6 +58,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     function getFilenameWithoutExtension(filename) {
         return filename.substring(0, filename.lastIndexOf('.')) || filename;
     }
+
+    // --- INFOGRAPHIC HANDLING ---
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) { // Limit file size to 5MB
+                alert("Image file is too large. Please choose an image smaller than 5MB.");
+                importImageInput.value = ''; // Clear the input
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Use Base64 for IMMEDIATE preview only
+                infographicImage.src = e.target.result;
+                infographicDisplayContainer.style.display = 'block';
+                removeImageBtn.style.display = 'inline-block';
+
+                // Store the FILENAME in the state
+                appState.infographic = file.name; 
+                console.log("Stored infographic filename:", appState.infographic);
+            };
+            reader.onerror = (error) => {
+                console.error("Error reading image file:", error);
+                alert("Error reading image file. Please try a different image or check console for errors.");
+                // Do not change appState.infographic, just reset preview
+                infographicImage.src = '';
+                infographicDisplayContainer.style.display = 'none';
+                removeImageBtn.style.display = 'none';
+            };
+            reader.readAsDataURL(file); // Read for preview
+        }
+        importImageInput.value = ''; // Clear the file input so the same file can be re-selected
+    }
+
+    function removeInfographic() {
+        appState.infographic = null;
+        renderInfographic(); // Update display
+        importImageInput.value = ''; // Clear file input in case a file was selected but not processed
+        console.log("Infographic removed");
+    }
+
+    function renderInfographic() {
+        if (appState.infographic && typeof appState.infographic === 'string') {
+            // Use the stored filename directly as the source
+            // The browser will look for this file relative to the HTML page
+            infographicImage.src = appState.infographic;
+            infographicDisplayContainer.style.display = 'block';
+            removeImageBtn.style.display = 'inline-block';
+            console.log("Rendering infographic with src:", appState.infographic);
+        } else {
+            // No valid filename stored, or it was explicitly removed
+            infographicImage.src = '';
+            infographicDisplayContainer.style.display = 'none';
+            removeImageBtn.style.display = 'none';
+            console.log("Hiding infographic display");
+        }
+    }
+    
+    // Event Listeners for Infographic
+    if (importImageInput) importImageInput.addEventListener('change', handleImageUpload);
+    if (removeImageBtn) removeImageBtn.addEventListener('click', removeInfographic);
+
 
     // --- STEP & UNIT DISPLAY UPDATES ---
     function updateStepNumbersAndDisplays() {
@@ -95,10 +166,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const newUnitData = unitDataToLoad || {
             id: newUnitId,
             name: unitName,
-            universalBaseRate: "0.500", // Default non-empty universal rate
+            universalBaseRate: "0.500", 
             stepOverrides: []
         };
-        // Ensure universalBaseRate is valid if loading
         if (unitDataToLoad && (typeof unitDataToLoad.universalBaseRate !== 'string' || unitDataToLoad.universalBaseRate.trim() === "")) {
             newUnitData.universalBaseRate = "0.500";
         }
@@ -132,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             baseRateInput.value = savedOverride.baseRate10Pulls || DEFAULT_RATE_STRING;
             finalPosterRateInput.value = savedOverride.finalPosterRate || DEFAULT_RATE_STRING;
         } else { 
-            baseRateInput.value = universalRateForDisplay; // This should be a valid number string like "0.500" or "0.000"
+            baseRateInput.value = universalRateForDisplay; 
             finalPosterRateInput.value = universalRateForDisplay;
         }
         ratesContainer.appendChild(entryElement);
@@ -161,7 +231,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const unitInModel = currentBanner.units.find(u => u.id === unitId);
                 if (unitInModel && !unitBlockDOM.querySelector(`.unit-step-rate-entry[data-step-ref-id="${newStepData.id}"]`)) {
                     const visualIndex = Array.from(container.children).length -1;
-                    // Pass unitInModel.universalBaseRate which should be a valid number string
                      addUnitStepRateEntryToUnit(unitBlockDOM, newStepData, visualIndex, null, unitInModel.universalBaseRate);
                 }
             });
@@ -184,13 +253,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const blockElement = unitInstance.firstElementChild; 
         blockElement.dataset.unitId = unitData.id;
         blockElement.querySelector('.unit-name').value = unitData.name;
-        blockElement.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate; // Should be valid string "0.500" etc.
+        blockElement.querySelector('.unit-universal-base-rate').value = unitData.universalBaseRate; 
         
         const ratesContainer = blockElement.querySelector('.unit-steps-rates-container');
         ratesContainer.innerHTML = ''; 
         stepsInBanner.forEach((step, index) => {
             const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
-            // Pass unitData.universalBaseRate for display if no override
             addUnitStepRateEntryToUnit(blockElement, step, index, override, unitData.universalBaseRate);
         });
         container.appendChild(blockElement);
@@ -198,10 +266,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     function updateUnitStepRateDisplaysForBanner(unitsToUpdate, allStepsInBanner) {
         if (!activeBannerContent.querySelector('.banner-data-container')) return;
-        const currentBanner = findBannerById(activeBannerId); // Not strictly needed if unitsToUpdate is self-contained
-        if(!currentBanner && unitsToUpdate.length === 0) return;
-
-
+        
         unitsToUpdate.forEach(unitData => {
             const unitBlockDOM = activeBannerContent.querySelector(`.unit-block[data-unit-id="${unitData.id}"]`);
             if (unitBlockDOM) {
@@ -209,7 +274,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ratesContainer.innerHTML = ''; 
                 allStepsInBanner.forEach((step, index) => {
                     const override = unitData.stepOverrides.find(so => so.globalStepDefId === step.id);
-                    // unitData.universalBaseRate should be the definitive source for display here
                     addUnitStepRateEntryToUnit(unitBlockDOM, step, index, override, unitData.universalBaseRate);
                 });
             }
@@ -325,38 +389,36 @@ document.addEventListener('DOMContentLoaded', async () => {
     function addBanner(bannerToLoad = null) {
         globalDefaultUnitNameCounter = 0; 
         const bannerId = bannerToLoad ? bannerToLoad.id : generateUniqueId('banner');
-        const bannerName = bannerToLoad ? bannerToLoad.name : `Banner ${banners.length + 1}`;
+        const bannerName = bannerToLoad ? bannerToLoad.name : `Banner ${appState.banners.length + 1}`;
         
         const newBannerData = bannerToLoad || {
             id: bannerId, name: bannerName, totalMultis: 30,
             steps: [], units: [], customAnalyses: []
         };
-        if (bannerToLoad) {
-            newBannerData.universalBaseRate = (bannerToLoad.universalBaseRate || "0.500").trim() === "" ? "0.500" : bannerToLoad.universalBaseRate;
-            newBannerData.steps.forEach(s => s.id = s.id || generateUniqueId('step'));
-            newBannerData.units.forEach(u => {
-                u.id = u.id || generateUniqueId('unit');
-                u.universalBaseRate = (u.universalBaseRate || "0.500").trim() === "" ? "0.500" : u.universalBaseRate;
-                u.stepOverrides = (u.stepOverrides || []).map(so => ({
+        if (bannerToLoad) { // Data coming from load, potentially already sanitized by applyState's sanitizeBannersData
+            newBannerData.steps = (bannerToLoad.steps || []).map(s => ({...s, id: s.id || generateUniqueId('step')}));
+            newBannerData.units = (bannerToLoad.units || []).map(u => ({
+                ...u, 
+                id: u.id || generateUniqueId('unit'),
+                universalBaseRate: (u.universalBaseRate || "0.500").trim() === "" ? "0.500" : u.universalBaseRate,
+                stepOverrides: (u.stepOverrides || []).map(so => ({
                     ...so,
                     baseRate10Pulls: (so.baseRate10Pulls || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.baseRate10Pulls,
                     finalPosterRate: (so.finalPosterRate || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.finalPosterRate,
-                }));
-            });
-            newBannerData.customAnalyses = (newBannerData.customAnalyses || []).map(a => ({
+                }))
+            }));
+            newBannerData.customAnalyses = (bannerToLoad.customAnalyses || []).map(a => ({
                 ...a,
                 id: a.id || generateUniqueId('analysis'),
                 constituents: (a.constituents || []).map(c => ({ ...c, id: c.id || generateUniqueId('constituent') }))
             }));
-        } else {
-            newBannerData.universalBaseRate = "0.500"; // Default for brand new banners
         }
 
 
-        banners.push(newBannerData);
+        appState.banners.push(newBannerData);
         renderBannerTabs();
 
-        if (!bannerToLoad) { 
+        if (!bannerToLoad) { // Completely new banner, add defaults
             const defaultStep = { id: generateUniqueId('step'), appliesToMultis: [], gemCost: 50 };
             newBannerData.steps.push(defaultStep);
             globalDefaultUnitNameCounter++;
@@ -412,11 +474,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function deleteActiveBanner() {
-        if (!activeBannerId || banners.length <= 1) { alert("Cannot delete the last banner."); return; }
+        if (!activeBannerId || appState.banners.length <= 1) { alert("Cannot delete the last banner."); return; }
         const bannerToDelete = findBannerById(activeBannerId);
         if (!confirm(`Delete banner "${bannerToDelete.name}"?`)) return;
-        banners = banners.filter(b => b.id !== activeBannerId);
-        activeBannerId = banners.length > 0 ? banners[0].id : null;
+        appState.banners = appState.banners.filter(b => b.id !== activeBannerId);
+        activeBannerId = appState.banners.length > 0 ? appState.banners[0].id : null;
         renderBannerTabs();
         if (activeBannerId) setActiveBanner(activeBannerId);
         else activeBannerContent.innerHTML = '<p>No active banner.</p>';
@@ -428,10 +490,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const banner = findBannerById(activeBannerId);
         if (banner) { banner.name = newName; renderBannerTabs(); }
     }
-    function findBannerById(id) { return banners.find(b => b.id === id); }
+    function findBannerById(id) { return appState.banners.find(b => b.id === id); }
+    
     function renderBannerTabs() { 
         bannerTabsContainer.innerHTML = '';
-        banners.forEach(banner => {
+        appState.banners.forEach(banner => {
             const tab = document.createElement('div');
             tab.className = 'banner-tab'; tab.textContent = banner.name; tab.dataset.bannerId = banner.id;
             if (banner.id === activeBannerId) tab.classList.add('active');
@@ -484,11 +547,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (unitData) {
                 let universalRateToApply = unitBlock.querySelector('.unit-universal-base-rate').value.trim();
                 if (universalRateToApply === "") {
-                    universalRateToApply = DEFAULT_RATE_STRING; // Use default if main universal input is empty
+                    universalRateToApply = DEFAULT_RATE_STRING; 
                 }
-                unitData.universalBaseRate = universalRateToApply; // Update model
-                unitData.stepOverrides = []; // Clear specific overrides in model
-                updateUnitStepRateDisplaysForBanner([unitData], currentBanner.steps); // Re-render step rates for this unit
+                unitData.universalBaseRate = universalRateToApply; 
+                unitData.stepOverrides = []; 
+                updateUnitStepRateDisplaysForBanner([unitData], currentBanner.steps); 
             }
         }
         if (e.target.matches('.add-analysis-target-btn')) createNewAnalysisTargetForActiveBanner(null);
@@ -595,7 +658,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             name, 
             displayName: setupObj.displayName || name, 
             lastModified: setupObj.lastModified || '1970-01-01T00:00:00.000Z', 
-            data: setupObj.data || setupObj 
+            data: setupObj.data // data is { banners: [], infographic: filename | null }
         }));
 
         setupsArray.sort((a, b) => new Date(b.lastModified) - new Date(a.lastModified));
@@ -617,7 +680,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         allSetups[name] = { 
             displayName: displayName,
             lastModified: currentTimestamp,
-            data: getCurrentState() 
+            data: getCurrentState() // getCurrentState() returns { banners, infographic: filename | null }
         };
         localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
         alert(`Setup "${name}" saved!`);
@@ -631,14 +694,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
         const setupToLoad = allSetups[nameKey];
         
-        if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) { 
-            const bannersData = setupToLoad.data || setupToLoad; 
-            applyState(bannersData); // applyState will also sanitize loaded rates
+        // Check if setupToLoad exists and has the 'data' property which holds the app state
+        if (setupToLoad && setupToLoad.data) { 
+            // setupToLoad.data should be { banners: [], infographic: filename | null }
+            applyState(setupToLoad.data); // applyState handles the structure
             saveSetupNameInput.value = nameKey.startsWith("AUTOLOAD_") || nameKey.startsWith("FILEIMPORT_") ? 
                                         getFilenameWithoutExtension(setupToLoad.originalFilename || nameKey) : nameKey;
             alert(`Setup "${setupToLoad.displayName || nameKey}" loaded!`);
         } else {
             alert(`Could not load setup "${nameKey}". It might be corrupted or in an old format.`);
+            console.warn("Problematic setup data:", setupToLoad);
         }
     });
 
@@ -659,14 +724,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     
     function getCurrentState() { 
-        // Banners array should already have sanitized rates (e.g. "0.000") due to on-change handlers
-        return JSON.parse(JSON.stringify(banners)); 
+        // Make sure appState.infographic is current before stringifying
+        return JSON.parse(JSON.stringify(appState)); 
     }
     
-    // Sanitizes rates within a banners array upon loading
-    function sanitizeBannersData(bannersToProcess) {
-        return bannersToProcess.map(bannerData => ({
+    function sanitizeBannersData(bannersToProcess) { // Sanitizes only the banners part
+        return (bannersToProcess || []).map(bannerData => ({
             ...bannerData,
+            id: bannerData.id || generateUniqueId('banner'),
             units: (bannerData.units || []).map(u => ({
                 ...u,
                 id: u.id || generateUniqueId('unit'),
@@ -687,39 +752,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
-    function applyState(bannersToLoadRaw) {
-        banners = []; activeBannerId = null; activeBannerContent.innerHTML = ''; globalDefaultUnitNameCounter = 0;
+    function applyState(loadedAppState) { // loadedAppState is { banners: [], infographic: filename | null }
+        appState.banners = []; // Reset banners
+        activeBannerId = null; 
+        activeBannerContent.innerHTML = ''; 
+        globalDefaultUnitNameCounter = 0;
         
-        if (!Array.isArray(bannersToLoadRaw)) {
-            console.error("Invalid state to apply: bannersToLoad is not an array.", bannersToLoadRaw);
-            alert("Error: The loaded setup data is invalid.");
-            addBanner(null); 
-            return;
-        }
+        // Defensively handle banners array
+        const bannersToLoad = loadedAppState && Array.isArray(loadedAppState.banners) ? loadedAppState.banners : [];
+        
+        // Sanitize the banners part before assigning to appState.banners
+        appState.banners = sanitizeBannersData(bannersToLoad);
 
-        const sanitizedBannersToLoad = sanitizeBannersData(bannersToLoadRaw);
+        // Set infographic filename, defaulting to null if missing or not a string
+        appState.infographic = (loadedAppState && typeof loadedAppState.infographic === 'string') ? loadedAppState.infographic : null;
+        
+        renderInfographic(); // Render based on the loaded filename (or null)
 
-        sanitizedBannersToLoad.forEach(bannerData => { // Use the sanitized data
-            // addBanner now expects bannerToLoad to be pre-sanitized if it comes from external source
-            // but its internal defaults still apply for truly new banners
-            const bannerId = bannerData.id || generateUniqueId('banner'); // Ensure ID
-            const loadedBanner = { // Construct the banner object to push, ensuring all parts are there
-                id: bannerId,
-                name: bannerData.name || `Banner ${banners.length + 1}`,
-                totalMultis: bannerData.totalMultis || 30,
-                steps: bannerData.steps, // Already processed by sanitizeBannersData
-                units: bannerData.units, // Already processed by sanitizeBannersData
-                customAnalyses: bannerData.customAnalyses // Already processed
-            };
-            banners.push(loadedBanner);
-        });
-
-
-        renderBannerTabs();
-        if (banners.length > 0) {
-            setActiveBanner(banners[0].id); 
+        renderBannerTabs(); // Uses appState.banners
+        if (appState.banners.length > 0) {
+            setActiveBanner(appState.banners[0].id); 
         } else {
-            addBanner(null);
+            // If loading resulted in no banners (e.g., empty or invalid input), add a default one
+            addBanner(null); 
         }
     }
 
@@ -751,13 +806,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         console.warn(`Could not fetch server setup '${filename}': ${setupResponse.statusText}`);
                         continue;
                     }
-                    const serverSetup = await setupResponse.json();
+                    const serverSetup = await setupResponse.json(); // Expects { banners: [], lastModified: "...", infographic?: filename | null }
 
-                    if (!serverSetup.banners || !Array.isArray(serverSetup.banners) || !serverSetup.lastModified) {
-                        console.warn(`Server setup file '${filename}' has invalid format. Skipping.`);
-                        continue;
+                    // Check for mandatory fields
+                    if (!serverSetup.lastModified) {
+                         console.warn(`Server setup file '${filename}' missing 'lastModified'. Skipping.`);
+                         continue;
                     }
-                    
+                     // Banners are optional for loading (applyState will handle missing/invalid)
+                    const serverBanners = Array.isArray(serverSetup.banners) ? serverSetup.banners : [];
+                    const serverInfographic = typeof serverSetup.infographic === 'string' ? serverSetup.infographic : null;
+
                     const baseFilename = getFilenameWithoutExtension(filename);
                     const displayName = `${baseFilename} (${new Date(serverSetup.lastModified).toLocaleDateString()})`;
                     const storageKey = `AUTOLOAD_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
@@ -766,7 +825,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                         displayName: displayName,
                         originalFilename: filename, 
                         lastModified: serverSetup.lastModified,
-                        data: sanitizeBannersData(serverSetup.banners) // Sanitize data from server files too
+                        data: { // Store as full appState structure
+                            banners: sanitizeBannersData(serverBanners),
+                            infographic: serverInfographic 
+                        }
                     };
                     setupsModified = true;
                     console.log(`Auto-loaded server setup '${filename}' as '${displayName}'.`);
@@ -786,15 +848,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     exportJsonBtn.addEventListener('click', () => {
-        const currentSetup = {
+        const currentState = getCurrentState(); // { banners, infographic: filename | null }
+        const jsonToExport = {
             lastModified: getCurrentTimestamp(),
-            banners: getCurrentState() 
+            infographic: currentState.infographic, // This is now the filename or null
+            banners: currentState.banners 
         };
-        const jsonString = JSON.stringify(currentSetup, null, 2);
+        const jsonString = JSON.stringify(jsonToExport, null, 2);
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const timestampForFile = currentSetup.lastModified.replace(/[:.]/g, '-');
+        const timestampForFile = jsonToExport.lastModified.replace(/[:.]/g, '-');
         a.href = url;
         a.download = `sugofest_setup_${timestampForFile}.json`;
         document.body.appendChild(a);
@@ -813,9 +877,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const importedSetup = JSON.parse(event.target.result);
-                if (!importedSetup.banners || !Array.isArray(importedSetup.banners) || !importedSetup.lastModified) {
-                    alert('Invalid JSON format. Expected "banners" array and "lastModified" timestamp.');
+                const importedSetup = JSON.parse(event.target.result); // Expects { lastModified, banners?, infographic?: filename | null }
+                
+                // Check only for lastModified, banners/infographic are optional
+                if (!importedSetup.lastModified) {
+                    alert('Invalid JSON format. Expected at least "lastModified" timestamp.');
                     return;
                 }
 
@@ -825,23 +891,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const displayName = `${baseFilename} (${new Date(importedSetup.lastModified).toLocaleString()})`;
                 let storageKey = `FILEIMPORT_${baseFilename.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
                 let counter = 1;
-                // const originalStorageKey = storageKey; // Not needed with current unique key logic
                 while(allSetups[`${storageKey}${counter > 1 ? '_'+counter : ''}`]) {
                     counter++;
                 }
                 storageKey = `${storageKey}${counter > 1 ? '_'+counter : ''}`;
 
-                const sanitizedBannersFromFile = sanitizeBannersData(importedSetup.banners);
+                // Prepare the data object for applyState and saving
+                const importedData = {
+                    banners: sanitizeBannersData(importedSetup.banners), // Sanitize, handles null/undefined banners
+                    infographic: typeof importedSetup.infographic === 'string' ? importedSetup.infographic : null // Get filename or null
+                };
 
+                // Save the full structure to local storage
                 allSetups[storageKey] = {
                     displayName: displayName,
                     originalFilename: file.name, 
                     lastModified: importedSetup.lastModified, 
-                    data: sanitizedBannersFromFile 
+                    data: importedData 
                 };
                 localStorage.setItem(SAVED_SETUPS_KEY, JSON.stringify(allSetups));
                 
-                applyState(sanitizedBannersFromFile); 
+                // Apply the imported state
+                applyState(importedData); 
+                
                 saveSetupNameInput.value = baseFilename; 
                 listSavedSetups(); 
                 loadSetupSelect.value = storageKey; 
@@ -860,7 +932,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- DATA COLLECTION FOR RESULTS PAGE (Attached to both .proceed-button elements) ---
     calculateBtnLinks.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const dataForAllBanners = banners.map(bannerData => {
+            // Use appState.banners for data collection
+            const dataForAllBanners = appState.banners.map(bannerData => {
                 const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
                 const customGroupAnalyses = (bannerData.customAnalyses || []).map(cg => ({
                     bannerName: bannerData.name, name: cg.name, type: "custom_group", 
@@ -868,7 +941,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 })).filter(cg => cg.constituents && cg.constituents.length > 0);
                 return {
                     bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
-                    units: bannerData.units, // These units should already have sanitized rates
+                    units: bannerData.units, 
                     stepDefinitions: bannerData.steps, 
                     analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
                 };
@@ -880,11 +953,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return; 
             }
             
-            const lastCalculatedSetup = {
+            // Save the full current state (including infographic filename) to LAST_CALCULATED_STATE_KEY
+            localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify({
                 lastModified: getCurrentTimestamp(),
-                data: getCurrentState() 
-            };
-            localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify(lastCalculatedSetup)); 
+                data: getCurrentState() // getCurrentState() returns { banners, infographic: filename | null }
+            })); 
+            
+            // For results.js, only banner data is needed.
             localStorage.setItem('sugofestCalcSetup', JSON.stringify({ allBannerData: dataForAllBanners }));
         });
     });
@@ -902,32 +977,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             const lastStateJSON = localStorage.getItem(LAST_CALCULATED_STATE_KEY);
             if (lastStateJSON) {
                 try {
-                    const stateToLoad = JSON.parse(lastStateJSON);
-                    if (stateToLoad && stateToLoad.data && Array.isArray(stateToLoad.data)) {
-                        applyState(stateToLoad.data); // applyState now sanitizes
+                    const stateToLoadContainer = JSON.parse(lastStateJSON); // { lastModified, data: { banners, infographic } }
+                    if (stateToLoadContainer && stateToLoadContainer.data) {
+                        applyState(stateToLoadContainer.data); 
                         console.log("Auto-loaded last calculated state (due to query param).");
                         if (window.history.replaceState) {
                             const cleanURL = window.location.protocol + "//" + window.location.host + window.location.pathname;
                             window.history.replaceState({ path: cleanURL }, '', cleanURL);
                         }
                         stateLoaded = true;
+                    } else {
+                         console.warn("Last calculated state format invalid:", stateToLoadContainer);
                     }
-                } catch (e) { console.error("Error parsing auto-load state:", e); }
+                } catch (e) { 
+                    console.error("Error parsing auto-load state:", e); 
+                }
             }
         }
 
         if (!stateLoaded && loadSetupSelect.options.length > 1) { 
             const firstSetupKey = loadSetupSelect.options[1].value; 
             const allSetups = JSON.parse(localStorage.getItem(SAVED_SETUPS_KEY) || '{}');
-            const setupToLoad = allSetups[firstSetupKey];
+            const setupToLoadContainer = allSetups[firstSetupKey]; // { displayName, lastModified, data: {banners, infographic} }
 
-            if (setupToLoad && (setupToLoad.data || Array.isArray(setupToLoad))) {
-                applyState(setupToLoad.data || setupToLoad); // applyState now sanitizes
+            if (setupToLoadContainer && setupToLoadContainer.data) {
+                applyState(setupToLoadContainer.data); 
                 saveSetupNameInput.value = firstSetupKey.startsWith("AUTOLOAD_") || firstSetupKey.startsWith("FILEIMPORT_") ? 
-                                            getFilenameWithoutExtension(setupToLoad.originalFilename || firstSetupKey) : firstSetupKey;
+                                            getFilenameWithoutExtension(setupToLoadContainer.originalFilename || firstSetupKey) : firstSetupKey;
                 loadSetupSelect.value = firstSetupKey;
-                console.log(`Auto-loaded most recent setup: "${setupToLoad.displayName || firstSetupKey}"`);
+                console.log(`Auto-loaded most recent setup: "${setupToLoadContainer.displayName || firstSetupKey}"`);
                 stateLoaded = true;
+            } else {
+                 console.warn("Most recent setup format invalid:", setupToLoadContainer);
             }
         }
         
@@ -935,20 +1016,30 @@ document.addEventListener('DOMContentLoaded', async () => {
              const lastCalculatedStateJSON = localStorage.getItem(LAST_CALCULATED_STATE_KEY);
              if (lastCalculatedStateJSON) {
                  try {
-                     const stateToLoad = JSON.parse(lastCalculatedStateJSON);
-                     if (stateToLoad && stateToLoad.data && Array.isArray(stateToLoad.data)) {
-                         applyState(stateToLoad.data); // applyState now sanitizes
+                     const stateToLoadContainer = JSON.parse(lastCalculatedStateJSON); // { lastModified, data: {banners, infographic} }
+                     if (stateToLoadContainer && stateToLoadContainer.data) {
+                         applyState(stateToLoadContainer.data); 
                          console.log("Loaded from last calculated state (fallback).");
                          stateLoaded = true;
+                     } else {
+                         console.warn("Fallback Last calculated state format invalid:", stateToLoadContainer);
                      }
-                 } catch (e) { console.error("Error parsing last calculated state (fallback):", e); }
+                 } catch (e) { 
+                     console.error("Error parsing last calculated state (fallback):", e); 
+                 }
              }
         }
 
         if (!stateLoaded) { 
             console.log("No saved state found, initializing with a default banner.");
-            addBanner(null);
+            // Initialize appState with default empty/null values before adding banner
+            appState = { banners: [], infographic: null };
+            addBanner(null); // Adds a default banner to appState.banners
+            renderInfographic(); // Ensure infographic display is hidden
         }
+        // Note: applyState already calls renderInfographic, so no extra call needed here
+        // unless stateLoaded is false AND we didn't load from fallback state either.
+        // The call inside the !stateLoaded block handles the truly initial case.
     }
     
     initializePage();
