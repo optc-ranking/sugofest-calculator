@@ -1,5 +1,5 @@
 {
-  "lastModified": "2025-05-13T02:49:06.011Z",
+  "lastModified": "2025-05-13T02:58:16.746Z",
   "infographic": "11th Anniversary Infographic.png",
   "banners": [
     {
@@ -379,7 +379,8 @@
               "unitId": "unit-1747024888258-le28jjes3",
               "multiplier": 1
             }
-          ]
+          ],
+          "type": "custom_group"
         },
         {
           "id": "analysis-1747081919096-jcjmnxjwi",
@@ -526,15 +527,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747103913174-9hcxhr166",
-              "finalPosterRate": "3.333"
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104014227-ikliyahcy",
-              "finalPosterRate": "6.667"
+              "finalPosterRate": "6.667",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104018509-mm9jelvdz",
-              "finalPosterRate": "12.5"
+              "finalPosterRate": "12.5",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104028667-b7mh2mo9r",
@@ -543,7 +547,8 @@
             },
             {
               "globalStepDefId": "step-1747104032110-zok4w3g16",
-              "finalPosterRate": "100"
+              "finalPosterRate": "100",
+              "baseRate10Pulls": "0.500"
             }
           ]
         },
@@ -554,19 +559,23 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747104032110-zok4w3g16",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747103913174-9hcxhr166",
-              "finalPosterRate": "3.333"
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104014227-ikliyahcy",
-              "finalPosterRate": "6.667"
+              "finalPosterRate": "6.667",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104018509-mm9jelvdz",
-              "finalPosterRate": "12.5"
+              "finalPosterRate": "12.5",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104028667-b7mh2mo9r",
@@ -582,15 +591,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747103913174-9hcxhr166",
-              "finalPosterRate": "3.333"
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104014227-ikliyahcy",
-              "finalPosterRate": "6.667"
+              "finalPosterRate": "6.667",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104018509-mm9jelvdz",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104028667-b7mh2mo9r",
@@ -599,7 +611,8 @@
             },
             {
               "globalStepDefId": "step-1747104032110-zok4w3g16",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
             }
           ]
         },
@@ -610,15 +623,18 @@
           "stepOverrides": [
             {
               "globalStepDefId": "step-1747103913174-9hcxhr166",
-              "finalPosterRate": "3.333"
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104014227-ikliyahcy",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104018509-mm9jelvdz",
-              "finalPosterRate": "0"
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
             },
             {
               "globalStepDefId": "step-1747104028667-b7mh2mo9r",
