@@ -1,5 +1,5 @@
 {
-  "lastModified": "2025-05-12T22:21:24.462Z",  
+  "lastModified": "2025-05-13T02:49:06.011Z",
   "infographic": "11th Anniversary Infographic.png",
   "banners": [
     {
@@ -466,6 +466,220 @@
               "id": "constituent-1747082019765-92rc6deh5",
               "unitId": "unit-1747081861333-28nqk084h",
               "multiplier": 20
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "banner-1747103913174-7988qk1k1",
+      "name": "Part 2-6",
+      "totalMultis": 30,
+      "steps": [
+        {
+          "id": "step-1747103913174-9hcxhr166",
+          "appliesToMultis": [
+            2,
+            3,
+            13,
+            18
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-1747104014227-ikliyahcy",
+          "appliesToMultis": [
+            5,
+            8,
+            25
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-1747104018509-mm9jelvdz",
+          "appliesToMultis": [
+            10,
+            20
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-1747104028667-b7mh2mo9r",
+          "appliesToMultis": [
+            15
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-1747104032110-zok4w3g16",
+          "appliesToMultis": [
+            30
+          ],
+          "gemCost": 50
+        }
+      ],
+      "units": [
+        {
+          "id": "unit-1747103913174-zwe88r3ih",
+          "name": "New 11th Anni Legend",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747103913174-9hcxhr166",
+              "finalPosterRate": "3.333"
+            },
+            {
+              "globalStepDefId": "step-1747104014227-ikliyahcy",
+              "finalPosterRate": "6.667"
+            },
+            {
+              "globalStepDefId": "step-1747104018509-mm9jelvdz",
+              "finalPosterRate": "12.5"
+            },
+            {
+              "globalStepDefId": "step-1747104028667-b7mh2mo9r",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            },
+            {
+              "globalStepDefId": "step-1747104032110-zok4w3g16",
+              "finalPosterRate": "100"
+            }
+          ]
+        },
+        {
+          "id": "unit-1747104059073-yx2u5yy8b",
+          "name": "Super Limited",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747104032110-zok4w3g16",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747103913174-9hcxhr166",
+              "finalPosterRate": "3.333"
+            },
+            {
+              "globalStepDefId": "step-1747104014227-ikliyahcy",
+              "finalPosterRate": "6.667"
+            },
+            {
+              "globalStepDefId": "step-1747104018509-mm9jelvdz",
+              "finalPosterRate": "12.5"
+            },
+            {
+              "globalStepDefId": "step-1747104028667-b7mh2mo9r",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            }
+          ]
+        },
+        {
+          "id": "unit-1747104074080-9knnuhhp8",
+          "name": "Limited",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747103913174-9hcxhr166",
+              "finalPosterRate": "3.333"
+            },
+            {
+              "globalStepDefId": "step-1747104014227-ikliyahcy",
+              "finalPosterRate": "6.667"
+            },
+            {
+              "globalStepDefId": "step-1747104018509-mm9jelvdz",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747104028667-b7mh2mo9r",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            },
+            {
+              "globalStepDefId": "step-1747104032110-zok4w3g16",
+              "finalPosterRate": "0"
+            }
+          ]
+        },
+        {
+          "id": "unit-1747104077570-jt559bxbe",
+          "name": "Other",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-1747103913174-9hcxhr166",
+              "finalPosterRate": "3.333"
+            },
+            {
+              "globalStepDefId": "step-1747104014227-ikliyahcy",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747104018509-mm9jelvdz",
+              "finalPosterRate": "0"
+            },
+            {
+              "globalStepDefId": "step-1747104028667-b7mh2mo9r",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            }
+          ]
+        }
+      ],
+      "customAnalyses": [
+        {
+          "id": "analysis-1747104087469-2c4t5dqd7",
+          "name": "All Supers (P2-5)",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-1747104101933-503debo7h",
+              "unitId": "unit-1747103913174-zwe88r3ih",
+              "multiplier": 1
+            },
+            {
+              "id": "constituent-1747104192548-8yngfstcj",
+              "unitId": "unit-1747104059073-yx2u5yy8b",
+              "multiplier": 2
+            },
+            {
+              "id": "constituent-1747104216111-zg5d5pdx0",
+              "unitId": "unit-1747104074080-9knnuhhp8",
+              "multiplier": 2
+            },
+            {
+              "id": "constituent-1747104227427-szy6zcbxt",
+              "unitId": "unit-1747104077570-jt559bxbe",
+              "multiplier": 1
+            }
+          ]
+        },
+        {
+          "id": "analysis-1747104241548-lqlpvvbi8",
+          "name": "All Supers + Anni (P2-5)",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-1747104253748-6ojk3sac6",
+              "unitId": "unit-1747103913174-zwe88r3ih",
+              "multiplier": 1
+            },
+            {
+              "id": "constituent-1747104258222-khzc5o17u",
+              "unitId": "unit-1747104059073-yx2u5yy8b",
+              "multiplier": 5
+            },
+            {
+              "id": "constituent-1747104259298-zne1tk01i",
+              "unitId": "unit-1747104074080-9knnuhhp8",
+              "multiplier": 3
+            },
+            {
+              "id": "constituent-1747104296760-ualyq7nsv",
+              "unitId": "unit-1747104077570-jt559bxbe",
+              "multiplier": 1
             }
           ]
         }

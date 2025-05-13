@@ -729,26 +729,78 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     function sanitizeBannersData(bannersToProcess) { // Sanitizes only the banners part
-        return (bannersToProcess || []).map(bannerData => ({
-            ...bannerData,
-            id: bannerData.id || generateUniqueId('banner'),
-            units: (bannerData.units || []).map(u => ({
-                ...u,
-                id: u.id || generateUniqueId('unit'),
-                universalBaseRate: (u.universalBaseRate || "0.500").trim() === "" ? "0.500" : u.universalBaseRate.trim(),
-                stepOverrides: (u.stepOverrides || []).map(so => ({
-                    ...so,
-                    baseRate10Pulls: (so.baseRate10Pulls || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.baseRate10Pulls.trim(),
-                    finalPosterRate: (so.finalPosterRate || DEFAULT_RATE_STRING).trim() === "" ? DEFAULT_RATE_STRING : so.finalPosterRate.trim(),
-                }))
-            })),
-            steps: (bannerData.steps || []).map(s => ({...s, id: s.id || generateUniqueId('step')})),
-            customAnalyses: (bannerData.customAnalyses || []).map(a => ({
-                ...a, 
-                id: a.id || generateUniqueId('analysis'),
-                constituents: (a.constituents || []).map(c => ({...c, id: c.id || generateUniqueId('constituent')}))
-            }))
-        }));
+        return (bannersToProcess || []).map(bannerData => {
+            // Ensure bannerData itself is an object, provide defaults if not fully formed
+             const sanitizedBanner = {
+                ...bannerData, // Spread existing properties first
+                id: bannerData?.id || generateUniqueId('banner'), // Use optional chaining for safety
+                name: bannerData?.name || `Banner ${bannersToProcess.length}`, // Default name if missing
+                totalMultis: bannerData?.totalMultis || 30, // Default multis
+                steps: (bannerData?.steps || []).map(s => ({ ...s, id: s?.id || generateUniqueId('step') })),
+                units: [], // Initialize units array
+                customAnalyses: [] // Initialize analyses array
+             };
+
+             // Sanitize Units
+             sanitizedBanner.units = (bannerData?.units || []).map(u => {
+                 const sanitizedUnit = {
+                     ...u, // Spread existing unit properties
+                     id: u?.id || generateUniqueId('unit'),
+                     name: u?.name || `Unit ${sanitizedBanner.units.length + 1}`, // Default unit name
+                     stepOverrides: [] // Initialize overrides
+                 };
+
+                 // Sanitize universalBaseRate
+                 let baseRate = u?.universalBaseRate;
+                 if (typeof baseRate !== 'string' || baseRate.trim() === "") {
+                     sanitizedUnit.universalBaseRate = "0.500"; // Default for universal
+                 } else {
+                     sanitizedUnit.universalBaseRate = baseRate.trim();
+                 }
+
+                 // Sanitize stepOverrides
+                 sanitizedUnit.stepOverrides = (u?.stepOverrides || []).map(so => {
+                     const sanitizedOverride = { ...so }; // Spread existing override properties
+
+                     let br10 = so?.baseRate10Pulls;
+                     if (typeof br10 !== 'string' || br10.trim() === "") {
+                         sanitizedOverride.baseRate10Pulls = DEFAULT_RATE_STRING; // Use the general default
+                     } else {
+                         sanitizedOverride.baseRate10Pulls = br10.trim();
+                     }
+
+                     let fpr = so?.finalPosterRate;
+                     if (typeof fpr !== 'string' || fpr.trim() === "") {
+                         sanitizedOverride.finalPosterRate = DEFAULT_RATE_STRING;
+                     } else {
+                         sanitizedOverride.finalPosterRate = fpr.trim();
+                     }
+                     // Ensure the globalStepDefId exists, though it should if the structure is correct
+                     sanitizedOverride.globalStepDefId = so?.globalStepDefId || null; // Or handle error if needed
+
+                     return sanitizedOverride;
+                 });
+
+                 return sanitizedUnit;
+             });
+
+             // Sanitize Custom Analyses (ensure IDs exist)
+             sanitizedBanner.customAnalyses = (bannerData?.customAnalyses || []).map(a => ({
+                 ...a, 
+                 id: a?.id || generateUniqueId('analysis'),
+                 name: a?.name || `Custom Group ${sanitizedBanner.customAnalyses.length + 1}`,
+                 type: a?.type || "custom_group",
+                 constituents: (a?.constituents || []).map(c => ({ 
+                     ...c, 
+                     id: c?.id || generateUniqueId('constituent'),
+                     // Ensure unitId and multiplier exist, provide defaults if needed
+                     unitId: c?.unitId || null, 
+                     multiplier: c?.multiplier || 1 
+                 }))
+             }));
+             
+            return sanitizedBanner;
+        });
     }
 
 
