@@ -1,222 +1,567 @@
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    margin: 0;
-    padding: 0;
-    background-color: #eef1f5; /* Lighter, neutral background */
-    color: #3d3d3d; /* Dark grey for text */
-    font-size: 16px;
+:root {
+    --bg: #eef3f7;
+    --surface: #ffffff;
+    --surface-soft: #f8fafc;
+    --line: #d9e0e8;
+    --line-strong: #bcc8d6;
+    --text: #172033;
+    --muted: #5e6b7c;
+    --navy: #12345a;
+    --blue: #1769e0;
+    --blue-dark: #0f55b8;
+    --teal: #0d8b78;
+    --gold: #c78500;
+    --gold-soft: #fff7e3;
+    --shadow: 0 12px 32px rgba(15, 39, 71, 0.08);
+    --radius: 8px;
 }
 
-header {
-    background-color: #2c3e50; /* Darker, more professional blue */
-    color: white;
-    padding: 18px 30px;
-    text-align: center;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-    border-bottom: 3px solid #1abc9c; /* Accent color */
+* {
+    box-sizing: border-box;
 }
-header h1 {
+
+body {
     margin: 0;
-    font-size: 2.1em;
-    font-weight: 600;
-    color: white;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
 }
-.back-link {
-    color: #bdc3c7; /* Lighter grey for less emphasis */
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 30px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 4px 18px rgba(18, 52, 90, 0.06);
+}
+
+.app-header h1 {
+    margin: 0;
+    color: var(--navy);
+    font-size: 1.45rem;
+    font-weight: 760;
+    letter-spacing: 0;
+}
+
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.primary-link,
+.secondary-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 38px;
+    padding: 8px 13px;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: #ffffff;
+    color: var(--navy);
     text-decoration: none;
-    font-size: 0.9em;
-    transition: color 0.2s ease;
+    font-weight: 650;
+    transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
-.back-link:hover {
-    color: #ecf0f1; /* Whiter on hover */
-    text-decoration: underline;
+
+.primary-link {
+    border-color: var(--teal);
+    background: var(--teal);
+    color: #ffffff;
+}
+
+.primary-link:hover,
+.secondary-link:hover {
+    transform: translateY(-1px);
+}
+
+.primary-link:hover {
+    background: #0b7465;
+    color: #ffffff;
+}
+
+.secondary-link:hover {
+    border-color: var(--blue);
+    color: var(--blue);
 }
 
 main {
-    padding: 25px;
-    max-width: 1300px; /* Slightly wider for more content */
-    margin: 25px auto;
+    display: grid;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    grid-template-areas:
+        "controls controls"
+        "bulk bulk"
+        "checklist chart"
+        "download download";
+    gap: 18px;
+    width: min(100%, 1500px);
+    margin: 0 auto;
+    padding: 24px;
 }
 
-.card { 
-    background-color: #ffffff;
-    border: 1px solid #dfe6e9; /* Softer border */
-    padding: 25px;
-    margin-bottom: 30px;
-    border-radius: 10px; /* More rounded corners */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.07); /* Softer shadow */
+.card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
 }
 
 .results-controls {
+    grid-area: controls;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    padding: 18px;
+}
+
+.results-controls label {
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.results-controls select {
+    min-width: 300px;
+}
+
+.heatmap-comparison-control {
     display: flex;
     align-items: center;
-    gap: 20px; /* More spacing */
-    padding: 20px; /* More padding within card */
+    gap: 12px;
 }
-.results-controls label {
-    font-weight: 600;
-    font-size: 1.05em;
-    margin-bottom: 0;
-    color: #34495e; /* Darker label color */
+
+.heatmap-comparison-control[hidden] {
+    display: none;
 }
-.results-controls select {
-    padding: 12px 15px; /* Larger select */
-    border: 1px solid #bdc3c7;
+
+.checklist-bulk-controls {
+    grid-area: bulk;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 18px;
+}
+
+select {
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid var(--line-strong);
     border-radius: 6px;
-    font-size: 1em;
-    min-width: 250px;
-    background-color: #fdfdfd;
-    transition: border-color 0.2s ease;
+    background: #ffffff;
+    color: var(--text);
+    font: inherit;
 }
-.results-controls select:focus {
-    border-color: #3498db; /* Highlight on focus */
+
+select:focus {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(23, 105, 224, 0.15);
     outline: none;
 }
 
-/* Checklist bulk controls styling */
-.checklist-bulk-controls {
-    text-align: center; /* Center the buttons */
-    padding: 15px; /* Reduced padding compared to other cards */
-    margin-bottom: 20px; /* Space before checklist */
-}
-
-.checklist-bulk-controls button {
-    margin-left: 10px;
-    margin-right: 10px;
-}
-
-/* Optional: A smaller version of utility buttons if needed */
-/* These utility buttons are also used for download, so style them consistently */
-.utility-button {
-    background-color: #3498db !important; /* Consistent blue */
-    color: white;
-    border: none;
-    padding: 12px 22px; /* Slightly larger buttons */
-    margin-top: 8px; 
-    margin-bottom: 8px; 
+button {
+    min-height: 40px;
+    border: 1px solid transparent;
     border-radius: 6px;
+    padding: 9px 14px;
+    font: inherit;
+    font-weight: 650;
     cursor: pointer;
-    font-size: 1em;
-    font-weight: 500;
-    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
-    display: inline-block; 
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(23, 105, 224, 0.22);
+}
+
+.utility-button {
+    border-color: rgba(13, 139, 120, 0.45) !important;
+    background: #ffffff !important;
+    color: var(--teal) !important;
+}
+
 .utility-button:hover {
-    opacity: 0.9;
-    transform: translateY(-1px); /* Slight lift on hover */
+    background: #ecfdf9 !important;
 }
+
 .utility-button-small {
-    padding: 8px 15px !important; /* Override general utility for smaller ones */
-    font-size: 0.9em !important;
+    min-height: 36px !important;
+    padding: 7px 13px !important;
+    font-size: 0.92rem !important;
 }
 
+#downloadDetailCsvBtn,
+#downloadGraphCsvBtn {
+    border-color: #d99a18 !important;
+    background: var(--gold-soft) !important;
+    color: #7a4d00 !important;
+}
 
-/* Checklist styling */
+#downloadDetailCsvBtn:hover,
+#downloadGraphCsvBtn:hover {
+    background: #ffe8ab !important;
+}
+
 #checklistContainerParent {
-    padding-top: 10px; /* Space above first banner group */
-}
-#checklistContainerParent .banner-checklist-group {
-    margin-bottom: 25px;
-    padding: 20px;
-    border: 1px solid #e0e6eb;
-    border-radius: 8px;
-    background-color: #f9fafb; /* Very light background for groups */
+    grid-area: checklist;
+    align-self: start;
+    max-height: 760px;
+    overflow: auto;
+    padding: 16px;
 }
 
-#checklistContainerParent .banner-checklist-group h4 { 
-    margin-top: 0; 
-    font-size: 1.4em; 
-    color: #2c3e50; /* Consistent with header */
-    border-bottom: 2px solid #1abc9c; /* Accent color */
-    padding-bottom: 12px;
-    margin-bottom: 18px;
+#checklistContainerParent::before {
+    content: "Banners & Analyses";
+    display: block;
+    margin-bottom: 12px;
+    color: var(--navy);
+    font-size: 1.15rem;
+    font-weight: 750;
 }
-#checklistContainerParent .banner-checklist-group label { 
-    display: inline-flex; 
+
+#checklistContainerParent .banner-checklist-group {
+    margin: 0 0 12px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-soft);
+    box-shadow: none;
+    overflow: hidden;
+}
+
+#checklistContainerParent .banner-checklist-group h4 {
+    margin: 0;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line);
+    background: #eef6ff;
+    color: var(--navy);
+    font-size: 1rem;
+    font-weight: 750;
+}
+
+#checklistContainerParent .banner-checklist-group span {
+    display: block;
+}
+
+#checklistContainerParent .banner-checklist-group label {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 9px;
     align-items: center;
-    margin-right: 28px; 
-    margin-bottom: 14px; 
-    font-weight: 500; /* Slightly bolder */
+    margin: 0;
+    padding: 10px 14px;
+    border-top: 1px solid rgba(217, 224, 232, 0.7);
+    color: var(--text);
     cursor: pointer;
-    transition: color 0.2s ease;
-    font-size: 0.95em;
-    color: #3d3d3d; /* Ensure default label color is readable */
+    font-size: 0.92rem;
 }
+
 #checklistContainerParent .banner-checklist-group label:hover {
-    color: #3498db; /* Blue on hover */
+    background: #ffffff;
 }
-#checklistContainerParent .banner-checklist-group input[type="checkbox"] {
-    margin-right: 10px;
-    height: 1.2em; /* Slightly larger checkboxes */
-    width: 1.2em;
-    accent-color: #3498db; 
-    cursor: pointer;
+
+#checklistContainerParent input[type="checkbox"] {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin: 0;
+    accent-color: var(--blue);
 }
-.color-swatch { 
-    display: inline-block;
-    width: 1.1em;
-    height: 1.1em;
-    margin-left: 8px;
-    border: 1px solid #b2bec3; /* Slightly darker border for swatch */
-    vertical-align: middle;
-    border-radius: 3px; /* Slightly rounded swatch */
+
+.ev-display {
+    color: var(--muted);
+    font-size: 0.78rem;
+    white-space: nowrap;
 }
-.checklist-container label .ev-display, /* Keep existing selector for backward compatibility if any */
-#checklistContainerParent .banner-checklist-group label .ev-display { /* More specific selector */
-    font-size: 0.8em;
-    color: #7f8c8d; /* Softer grey for EV */
-    margin-left: 10px;
-    font-style: italic;
+
+.color-swatch {
+    width: 0.9rem;
+    height: 0.9rem;
+    border: 1px solid rgba(23, 32, 51, 0.18);
+    border-radius: 999px;
 }
 
 #chartContainerOuter {
-    padding: 20px; 
+    grid-area: chart;
+    padding: 20px;
 }
-#chartContainer { 
-    position: relative; 
-    height: 65vh; /* Increased height */
-    min-height: 500px; 
+
+#chartContainerOuter::before {
+    content: "Graph";
+    display: block;
+    margin-bottom: 12px;
+    color: var(--navy);
+    font-size: 1.15rem;
+    font-weight: 750;
+}
+
+#chartContainer {
+    position: relative;
     width: 100%;
+    height: 640px;
+    min-height: 520px;
 }
 
-/* Download Section Styles */
+.heatmap-container {
+    height: 100%;
+    min-height: 520px;
+    overflow: auto;
+}
+
+.heatmap-container[hidden] {
+    display: none;
+}
+
+.heatmap-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 14px;
+}
+
+.heatmap-section + .heatmap-section {
+    margin-top: 24px;
+}
+
+.heatmap-section {
+    width: max-content;
+    min-width: 100%;
+}
+
+.heatmap-header h3 {
+    margin: 0 0 4px;
+    color: var(--navy);
+    font-size: 1.05rem;
+}
+
+.heatmap-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.heatmap-x {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface-soft);
+    padding: 8px 10px;
+    color: var(--navy);
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 300px) repeat(var(--heatmap-columns), minmax(46px, 1fr));
+    min-width: max-content;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.heatmap-corner,
+.heatmap-col-header,
+.heatmap-row-header,
+.heatmap-cell {
+    min-height: 38px;
+    border-right: 1px solid rgba(255, 255, 255, 0.66);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.66);
+}
+
+.heatmap-corner,
+.heatmap-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eef6ff;
+    color: var(--navy);
+    font-size: 0.82rem;
+    font-weight: 750;
+}
+
+.heatmap-corner {
+    justify-content: flex-start;
+    padding: 0 12px;
+}
+
+.heatmap-row-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 4px 12px;
+    background: var(--surface-soft);
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.heatmap-row-header small {
+    display: block;
+    margin-top: 1px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+}
+
+.heatmap-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #172033;
+    font-size: 0.82rem;
+    font-weight: 750;
+    font-variant-numeric: tabular-nums;
+}
+
+.heatmap-cell-dark {
+    color: #ffffff;
+}
+
+.heatmap-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.heatmap-legend span {
+    display: inline-flex;
+    gap: 7px;
+    align-items: center;
+}
+
+.heatmap-legend-swatch {
+    width: 18px;
+    height: 14px;
+    border: 1px solid rgba(23, 32, 51, 0.18);
+    border-radius: 3px;
+}
+
+.heatmap-green {
+    background: rgb(94, 176, 100);
+}
+
+.heatmap-yellow {
+    background: rgb(245, 205, 72);
+}
+
+.heatmap-red {
+    background: rgb(211, 65, 65);
+}
+
+.heatmap-empty {
+    margin: 0;
+    color: var(--muted);
+}
+
 .download-section {
-    text-align: center;
-    padding: 25px;
+    grid-area: download;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px 14px;
+    align-items: center;
+    padding: 20px;
 }
+
 .download-section h3 {
-    margin-top: 0;
-    font-size: 1.6em;
-    color: #2c3e50;
-    margin-bottom: 10px;
+    grid-column: 1;
+    margin: 0;
+    color: var(--navy);
+    font-size: 1.15rem;
 }
+
 .download-section p {
-    font-size: 0.95em;
-    color: #555;
-    margin-bottom: 20px;
-    max-width: 750px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.7;
-}
-.download-section hr.download-hr { 
-    margin: 25px auto;
-    max-width: 70%;
-    border: 0;
-    border-top: 1px dashed #bdc3c7; /* Softer dashed line */
+    grid-column: 1;
+    margin: 0;
+    color: var(--muted);
 }
 
-/* Ensure download buttons use the .utility-button styles by default */
-/* Specific overrides if needed: */
-#downloadDetailCsvBtn { 
-    /* Inherits .utility-button, specific overrides can go here if any */
-    /* e.g., background-color: #some-other-color !important; */
-}
-#downloadGraphCsvBtn { 
-    background-color: #9b59b6 !important; /* Purple for graph data, keep this specific override */
+.download-section button {
+    justify-self: end;
+    white-space: nowrap;
 }
 
+.download-section hr.download-hr {
+    display: none;
+}
 
-a { color: #3498db; }
-a:hover { color: #2980b9; }
+a {
+    color: var(--blue);
+}
+
+a:hover {
+    color: var(--blue-dark);
+}
+
+@media (max-width: 980px) {
+    .app-header {
+        display: grid;
+        align-items: start;
+        padding: 16px;
+    }
+
+    .app-header h1 {
+        font-size: 1.45rem;
+    }
+
+    main {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "controls"
+            "bulk"
+            "checklist"
+            "chart"
+            "download";
+        padding: 16px;
+    }
+
+    .results-controls,
+    .checklist-bulk-controls,
+    .download-section {
+        display: grid;
+        justify-content: stretch;
+    }
+
+    .download-section {
+        grid-template-columns: 1fr;
+    }
+
+    .download-section p,
+    .download-section button {
+        grid-column: 1;
+        justify-self: stretch;
+        white-space: normal;
+    }
+
+    .results-controls select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .heatmap-comparison-control {
+        display: grid;
+        gap: 8px;
+    }
+
+    #chartContainer {
+        height: 520px;
+    }
+}

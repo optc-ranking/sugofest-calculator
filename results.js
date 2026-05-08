@@ -10,24 +10,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     if (backToEntryLink) {
-        backToEntryLink.href = "index.html?autoLoadLast=true";
+        backToEntryLink.href = "index.html";
+        backToEntryLink.textContent = "Overview";
     }
 
     if (!storedData) { 
-        document.body.innerHTML = "<h1>No data found.</h1><p><a href='index.html'>Please go back to data entry.</a></p>";
+        document.body.innerHTML = "<h1>No data found.</h1><p><a href='index.html'>Overview</a></p>";
         return;
     }
 
     const setupForAllBanners = JSON.parse(storedData);
     const allBannerData = setupForAllBanners.allBannerData;
+    const heatmapDefaults = setupForAllBanners.homepageAnalysisDefaults?.heatmaps || setupForAllBanners.heatmapDefaults || null;
 
     if (!allBannerData || !Array.isArray(allBannerData) || allBannerData.length === 0) { 
-        document.body.innerHTML = "<h1>Banner data is missing or invalid.</h1><p><a href='index.html'>Go Back</a></p>";
+        document.body.innerHTML = "<h1>No banner data.</h1><p><a href='index.html'>Overview</a></p>";
         return;
     }
 
     const checklistParentContainer = document.getElementById('checklistContainerParent');
     const rateTypeSelect = document.getElementById('rateTypeSelect');
+    const heatmapContainer = document.getElementById('heatmapContainer');
+    const resultsChartCanvas = document.getElementById('resultsChart');
     let chartInstance = null;
     const allCalculatedResults = []; 
     
@@ -41,6 +45,31 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     const MAX_MULTIS_FOR_CSV = 200;
     const PROBABILITY_THRESHOLD_FOR_100_PERCENT = 0.9999;
+    const FIXED_HEATMAP_PRESETS = [
+        {
+            key: "newLegend",
+            title: "New 11th Anni Unit, When to Swap from Part 1",
+            sourceBanner: "Part 1",
+            switchAfterMulti: 30,
+            rows: [
+                { sourceAnalysis: "Monster Trio + Kizaru + Nami", comparisonBanner: "Part 2-6", comparisonAnalysis: "New 11th Anni Legend" },
+                { sourceAnalysis: "Monster Trio + Kizaru", comparisonBanner: "Part 2-6", comparisonAnalysis: "New 11th Anni Legend" },
+                { sourceAnalysis: "1 New Super + Nami", comparisonBanner: "Part 2-6", comparisonAnalysis: "New 11th Anni Legend" },
+                { sourceAnalysis: "Monster Trio or Kizaru", comparisonBanner: "Part 2-6", comparisonAnalysis: "New 11th Anni Legend" },
+                { sourceAnalysis: "Nami", comparisonBanner: "Part 2-6", comparisonAnalysis: "New 11th Anni Legend" }
+            ]
+        },
+        {
+            key: "supers",
+            title: "All Supers / Anni Exclusives, When to Swap from Part 1",
+            sourceBanner: "Part 1",
+            switchAfterMulti: 30,
+            rows: [
+                { sourceAnalysis: "All Supers", comparisonBanner: "Part 2-6", comparisonAnalysis: "All Supers (P2-5)" },
+                { sourceAnalysis: "All Supers + Annis", comparisonBanner: "Part 2-6", comparisonAnalysis: "All Supers + Anni (P2-5)" }
+            ]
+        }
+    ];
 
     function getNextColor(analysisFullName) { 
         if (!assignedColors[analysisFullName]) {
@@ -182,6 +211,381 @@ document.addEventListener('DOMContentLoaded', () => {
             expectedValueGems: ((1 - cumulativeProbNotPullCurrent) > 1e-9 && expectedValueGems > 0) ? expectedValueGems : Infinity 
         };
     }
+
+    function getSingleMultiSuccessChance(analysisSpec, unitsInCurrentBanner, stepsInCurrentBanner, multiNumber, forUniversalPhase = false) {
+        let effBr = 0;
+        let effFpr = 0;
+        let cost = 50;
+
+        if (analysisSpec.type === "single_unit") {
+            const r = getUnitRatesAndCostForMulti(analysisSpec.unitId, multiNumber, unitsInCurrentBanner, stepsInCurrentBanner, forUniversalPhase);
+            effBr = r.br;
+            effFpr = r.fpr;
+            cost = r.cost;
+        } else if (analysisSpec.type === "custom_group") {
+            let firstCostSet = false;
+            if (analysisSpec.constituents) {
+                analysisSpec.constituents.forEach(c => {
+                    if (!c.unitId) return;
+                    const r = getUnitRatesAndCostForMulti(c.unitId, multiNumber, unitsInCurrentBanner, stepsInCurrentBanner, forUniversalPhase);
+                    const m = parseInt(c.multiplier) || 1;
+                    effBr += r.br * m;
+                    effFpr += r.fpr * m;
+                    if (!firstCostSet) {
+                        cost = r.cost;
+                        firstCostSet = true;
+                    }
+                });
+            }
+        }
+
+        effBr = Math.min(effBr, 1.0);
+        effFpr = Math.min(effFpr, 1.0);
+
+        return {
+            probability: 1 - (Math.pow(1 - effBr, 10) * (1 - effFpr)),
+            cost
+        };
+    }
+
+    function calculateSwitchingEV(rowResult, startMulti, switchAfterMulti, fallbackEV) {
+        let cumulativeProbNotPull = 1.0;
+        let totalGemsSpent = 0;
+        let expectedValueGems = 0;
+
+        for (let multi = startMulti; multi <= switchAfterMulti; multi++) {
+            const thisMulti = getSingleMultiSuccessChance(
+                rowResult.analysisSpec,
+                rowResult.units,
+                rowResult.stepDefinitions,
+                multi
+            );
+            totalGemsSpent += thisMulti.cost;
+            const probSuccessFirstTimeThisMulti = cumulativeProbNotPull * thisMulti.probability;
+            expectedValueGems += totalGemsSpent * probSuccessFirstTimeThisMulti;
+            cumulativeProbNotPull *= (1 - thisMulti.probability);
+
+            if ((1 - cumulativeProbNotPull) > PROBABILITY_THRESHOLD_FOR_100_PERCENT) {
+                cumulativeProbNotPull = 0.0;
+            }
+            cumulativeProbNotPull = Math.max(0, Math.min(1, cumulativeProbNotPull));
+        }
+
+        return expectedValueGems + cumulativeProbNotPull * (totalGemsSpent + fallbackEV);
+    }
+
+    function getHeatmapColor(value, comparisonValue) {
+        if (!Number.isFinite(value) || !Number.isFinite(comparisonValue)) return "rgb(128, 128, 128)";
+        const diff = value - comparisonValue;
+        const green = [94, 176, 100];
+        const yellow = [245, 205, 72];
+        const red = [211, 65, 65];
+
+        if (diff <= 0) return `rgb(${green.join(", ")})`;
+        if (diff >= 50) return `rgb(${red.join(", ")})`;
+
+        const start = diff <= 25 ? green : yellow;
+        const end = diff <= 25 ? yellow : red;
+        const t = diff <= 25 ? diff / 25 : (diff - 25) / 25;
+        const mixed = start.map((channel, index) => Math.round(channel + (end[index] - channel) * t));
+        return `rgb(${mixed.join(", ")})`;
+    }
+
+    function findBannerByName(name) {
+        return allBannerData.find(banner => banner.bannerName === name);
+    }
+
+    function findAnalysisSpecByName(banner, name) {
+        return banner?.analysesToPerformOnResultsPage?.find(analysis => analysis.name === name) || null;
+    }
+
+    function buildHeatmapResult(banner, analysisSpec) {
+        const maxMultisForGraph = parseInt(banner.totalMultis) || 30;
+        const result = calculateStatsForSingleAnalysis(
+            analysisSpec,
+            banner.units,
+            banner.stepDefinitions,
+            maxMultisForGraph,
+            banner.bannerName
+        );
+        result.analysisSpec = analysisSpec;
+        result.units = banner.units;
+        result.stepDefinitions = banner.stepDefinitions;
+        result.maxMultisForGraph = maxMultisForGraph;
+        return result;
+    }
+
+    function resolveFixedHeatmapRows(preset) {
+        const configuredRows = getConfiguredHeatmapRows(preset);
+        if (configuredRows) return configuredRows;
+
+        const sourceBanner = findBannerByName(preset.sourceBanner);
+        if (!sourceBanner) return [];
+
+        return preset.rows.map(row => {
+            const comparisonBanner = findBannerByName(row.comparisonBanner);
+            const sourceSpec = findAnalysisSpecByName(sourceBanner, row.sourceAnalysis);
+            const comparisonSpec = findAnalysisSpecByName(comparisonBanner, row.comparisonAnalysis);
+            if (!comparisonBanner || !sourceSpec || !comparisonSpec) return null;
+
+            return {
+                source: buildHeatmapResult(sourceBanner, sourceSpec),
+                comparison: buildHeatmapResult(comparisonBanner, comparisonSpec),
+                comparisonLabel: `${comparisonBanner.bannerName} - ${comparisonSpec.name}`
+            };
+        }).filter(Boolean);
+    }
+
+    function getAnalysisIdForResults(banner, analysis) {
+        if (analysis.type === "single_unit") return `${banner.bannerId}::single::${analysis.unitId}`;
+        return `${banner.bannerId}::custom::${analysis.analysisId}`;
+    }
+
+    function getResultsAnalysisOptions() {
+        const options = [];
+        allBannerData.forEach(banner => {
+            (banner.analysesToPerformOnResultsPage || []).forEach(analysis => {
+                if (analysis.type === "custom_group" && !analysis.analysisId) return;
+                options.push({
+                    id: getAnalysisIdForResults(banner, analysis),
+                    banner,
+                    analysis
+                });
+            });
+        });
+        return options;
+    }
+
+    function getConfiguredHeatmapRows(preset) {
+        if (!heatmapDefaults) return null;
+        const optionMap = new Map(getResultsAnalysisOptions().map(option => [option.id, option]));
+
+        if (preset.key === "newLegend") {
+            const comparisonOption = optionMap.get(heatmapDefaults.newLegend?.comparisonId);
+            const rowIds = heatmapDefaults.newLegend?.rowIds || [];
+            if (!comparisonOption || rowIds.length === 0) return null;
+            return rowIds.map(rowId => {
+                const rowOption = optionMap.get(rowId);
+                if (!rowOption) return null;
+                return {
+                    source: buildHeatmapResult(rowOption.banner, rowOption.analysis),
+                    comparison: buildHeatmapResult(comparisonOption.banner, comparisonOption.analysis),
+                    comparisonLabel: `${comparisonOption.banner.bannerName} - ${comparisonOption.analysis.name}`
+                };
+            }).filter(Boolean);
+        }
+
+        if (preset.key === "supers") {
+            const rows = heatmapDefaults.supers?.rows || [];
+            if (rows.length === 0) return null;
+            return rows.map(row => {
+                const rowOption = optionMap.get(row.rowId);
+                const comparisonOption = optionMap.get(row.comparisonId);
+                if (!rowOption || !comparisonOption) return null;
+                return {
+                    source: buildHeatmapResult(rowOption.banner, rowOption.analysis),
+                    comparison: buildHeatmapResult(comparisonOption.banner, comparisonOption.analysis),
+                    comparisonLabel: `${comparisonOption.banner.bannerName} - ${comparisonOption.analysis.name}`
+                };
+            }).filter(Boolean);
+        }
+
+        return null;
+    }
+
+    function renderFixedHeatmapSection(preset) {
+        const rows = resolveFixedHeatmapRows(preset);
+        if (rows.length === 0) return null;
+
+        const section = document.createElement("section");
+        section.className = "heatmap-section";
+        const switchAfterMulti = preset.switchAfterMulti || 30;
+        const sharedComparison = rows.every(row => row.comparison.fullAnalysisName === rows[0].comparison.fullAnalysisName);
+        const firstComparisonEV = rows[0].comparison.expectedValueGems;
+
+        const header = document.createElement("div");
+        header.className = "heatmap-header";
+        header.innerHTML = `
+            <div>
+                <h3>${preset.title}</h3>
+                <p>Cells show average gems if you start Part 1 at the listed multi, then switch after multi ${switchAfterMulti} if still missed.</p>
+            </div>
+            ${sharedComparison ? `<div class="heatmap-x">swap at ${firstComparisonEV.toFixed(1)} gems</div>` : ""}
+        `;
+        section.appendChild(header);
+
+        const table = document.createElement("div");
+        table.className = "heatmap-grid";
+        table.style.setProperty("--heatmap-columns", switchAfterMulti);
+
+        const corner = document.createElement("div");
+        corner.className = "heatmap-corner";
+        corner.textContent = "Analysis";
+        table.appendChild(corner);
+
+        for (let multi = 1; multi <= switchAfterMulti; multi++) {
+            const columnHeader = document.createElement("div");
+            columnHeader.className = "heatmap-col-header";
+            columnHeader.textContent = multi;
+            table.appendChild(columnHeader);
+        }
+
+        rows.forEach(row => {
+            const comparisonEV = row.comparison.expectedValueGems;
+            const rowHeader = document.createElement("div");
+            rowHeader.className = "heatmap-row-header";
+            rowHeader.innerHTML = `<span>${row.source.originalAnalysisName}</span><small>swap at ${comparisonEV.toFixed(1)} gems</small>`;
+            table.appendChild(rowHeader);
+
+            for (let multi = 1; multi <= switchAfterMulti; multi++) {
+                const value = calculateSwitchingEV(row.source, multi, switchAfterMulti, comparisonEV);
+                const diff = value - comparisonEV;
+                const cell = document.createElement("div");
+                cell.className = "heatmap-cell";
+                cell.style.backgroundColor = getHeatmapColor(value, comparisonEV);
+                cell.textContent = Number.isFinite(value) ? value.toFixed(0) : "Inf";
+                cell.title = `${row.source.fullAnalysisName}, start M${multi}: ${Number.isFinite(value) ? value.toFixed(1) : "Effectively Never"} gems. ${Number.isFinite(diff) ? Math.abs(diff).toFixed(1) : "Inf"} gems ${diff >= 0 ? "more than" : "less than"} switching now to ${row.comparisonLabel}.`;
+                if (diff >= 45) cell.classList.add("heatmap-cell-dark");
+                table.appendChild(cell);
+            }
+        });
+
+        section.appendChild(table);
+        return section;
+    }
+
+    function renderFixedHeatmaps() {
+        if (!heatmapContainer) return;
+        heatmapContainer.innerHTML = "";
+
+        const sections = FIXED_HEATMAP_PRESETS.map(renderFixedHeatmapSection).filter(Boolean);
+        if (sections.length === 0) {
+            heatmapContainer.innerHTML = "<p class='heatmap-empty'>No average-gems heatmaps are available for this setup.</p>";
+            return;
+        }
+
+        sections.forEach(section => heatmapContainer.appendChild(section));
+
+        const legend = document.createElement("div");
+        legend.className = "heatmap-legend";
+        legend.innerHTML = `
+            <span><i class="heatmap-legend-swatch heatmap-green"></i>Same or cheaper than switching now</span>
+            <span><i class="heatmap-legend-swatch heatmap-yellow"></i>About 25 gems more</span>
+            <span><i class="heatmap-legend-swatch heatmap-red"></i>50+ gems more</span>
+        `;
+        heatmapContainer.appendChild(legend);
+    }
+
+    function populateHeatmapComparisonOptions() {
+        if (!heatmapComparisonSelect) return;
+
+        const previousValue = heatmapComparisonSelect.value;
+        heatmapComparisonSelect.innerHTML = "";
+
+        allCalculatedResults.forEach(result => {
+            const option = document.createElement("option");
+            option.value = result.fullAnalysisName;
+            option.textContent = result.fullAnalysisName;
+            heatmapComparisonSelect.appendChild(option);
+        });
+
+        if (previousValue && allCalculatedResults.some(result => result.fullAnalysisName === previousValue)) {
+            heatmapComparisonSelect.value = previousValue;
+            return;
+        }
+
+        const defaultComparison = allCalculatedResults.find(result =>
+            /part\s*2\s*-\s*6/i.test(result.bannerName) &&
+            /new\s*11th\s*anni\s*legend/i.test(result.originalAnalysisName)
+        ) || allCalculatedResults.find(result => /new\s*11th\s*anni\s*legend/i.test(result.originalAnalysisName)) || allCalculatedResults[0];
+
+        if (defaultComparison) heatmapComparisonSelect.value = defaultComparison.fullAnalysisName;
+    }
+
+    function renderHeatmap(selectedFullAnalysisNames) {
+        if (!heatmapContainer || !heatmapComparisonSelect) return;
+
+        populateHeatmapComparisonOptions();
+        const comparisonResult = allCalculatedResults.find(result => result.fullAnalysisName === heatmapComparisonSelect.value);
+        heatmapContainer.innerHTML = "";
+
+        if (!comparisonResult || !Number.isFinite(comparisonResult.expectedValueGems)) {
+            heatmapContainer.innerHTML = "<p class='heatmap-empty'>Choose a comparison analysis with a finite EV.</p>";
+            return;
+        }
+
+        const rowResults = selectedFullAnalysisNames
+            .map(fullName => allCalculatedResults.find(result => result.fullAnalysisName === fullName))
+            .filter(result => result && result.fullAnalysisName !== comparisonResult.fullAnalysisName);
+
+        if (rowResults.length === 0) {
+            heatmapContainer.innerHTML = "<p class='heatmap-empty'>Select at least one analysis other than the comparison target.</p>";
+            return;
+        }
+
+        const switchAfterMulti = Math.max(1, Math.min(
+            comparisonResult.maxMultisForGraph || 30,
+            ...rowResults.map(result => result.maxMultisForGraph || 30)
+        ));
+        const comparisonEV = comparisonResult.expectedValueGems;
+
+        const header = document.createElement("div");
+        header.className = "heatmap-header";
+        header.innerHTML = `
+            <div>
+                <h3>Average Gems Heat Map</h3>
+                <p>Cells show average gems if you start that row's banner at the listed multi, then switch to the comparison target after multi ${switchAfterMulti} if still missed.</p>
+            </div>
+            <div class="heatmap-x">Switching now averages ${comparisonEV.toFixed(1)} gems</div>
+        `;
+        heatmapContainer.appendChild(header);
+
+        const table = document.createElement("div");
+        table.className = "heatmap-grid";
+        table.style.setProperty("--heatmap-columns", switchAfterMulti);
+
+        const corner = document.createElement("div");
+        corner.className = "heatmap-corner";
+        corner.textContent = "Analysis";
+        table.appendChild(corner);
+
+        for (let multi = 1; multi <= switchAfterMulti; multi++) {
+            const columnHeader = document.createElement("div");
+            columnHeader.className = "heatmap-col-header";
+            columnHeader.textContent = multi;
+            table.appendChild(columnHeader);
+        }
+
+        rowResults.forEach(result => {
+            const rowHeader = document.createElement("div");
+            rowHeader.className = "heatmap-row-header";
+            rowHeader.textContent = result.originalAnalysisName;
+            table.appendChild(rowHeader);
+
+            for (let multi = 1; multi <= switchAfterMulti; multi++) {
+                const value = calculateSwitchingEV(result, multi, switchAfterMulti, comparisonEV);
+                const diff = value - comparisonEV;
+                const cell = document.createElement("div");
+                cell.className = "heatmap-cell";
+                cell.style.backgroundColor = getHeatmapColor(value, comparisonEV);
+                cell.textContent = Number.isFinite(value) ? value.toFixed(0) : "∞";
+                cell.title = `${result.fullAnalysisName}, start M${multi}: ${Number.isFinite(value) ? value.toFixed(1) : "Effectively Never"} gems (${diff >= 0 ? "+" : ""}${Number.isFinite(diff) ? diff.toFixed(1) : "∞"} vs X)`;
+                if (diff >= 45) cell.classList.add("heatmap-cell-dark");
+                table.appendChild(cell);
+            }
+        });
+
+        heatmapContainer.appendChild(table);
+
+        const legend = document.createElement("div");
+        legend.className = "heatmap-legend";
+        legend.innerHTML = `
+            <span><i class="heatmap-legend-swatch heatmap-green"></i>Same or cheaper than switching now</span>
+            <span><i class="heatmap-legend-swatch heatmap-yellow"></i>About 25 gems more</span>
+            <span><i class="heatmap-legend-swatch heatmap-red"></i>50+ gems more</span>
+        `;
+        heatmapContainer.appendChild(legend);
+    }
     
     function generateDetailedMultiDataForCSV(analysisSpec, unitsInBanner, stepsInBanner, maxMultisForCSV, bannerName) {
         const multiHeaders = [`${bannerName} - ${analysisSpec.name}`];
@@ -287,6 +691,10 @@ document.addEventListener('DOMContentLoaded', () => {
             banner.analysesToPerformOnResultsPage.forEach(analysisSpec => {
                 const result = calculateStatsForSingleAnalysis(analysisSpec, banner.units, banner.stepDefinitions, maxMultisForThisBannerGraph, banner.bannerName);
                 if (result.data && result.data.length > 0) {
+                    result.analysisSpec = analysisSpec;
+                    result.units = banner.units;
+                    result.stepDefinitions = banner.stepDefinitions;
+                    result.maxMultisForGraph = maxMultisForThisBannerGraph;
                     allCalculatedResults.push(result); 
 
                     const checkboxId = `check-${result.fullAnalysisName.replace(/[^a-zA-Z0-9]/g, '-')}`;
@@ -326,6 +734,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const datasets = [];
         const selectedFullAnalysisNames = Array.from(document.querySelectorAll('#checklistContainerParent input[type="checkbox"]:checked'))
                                            .map(cb => cb.value);
+
+        const heatmapMode = selectedRateTypeKey === "evHeatMap";
+        if (resultsChartCanvas) resultsChartCanvas.hidden = heatmapMode;
+        if (heatmapContainer) heatmapContainer.hidden = !heatmapMode;
+        if (heatmapMode) {
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+            renderFixedHeatmaps();
+            return;
+        }
 
         let yAxisConfiguredMax; 
 
@@ -458,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         if (chartInstance) chartInstance.destroy();
-        const ctx = document.getElementById('resultsChart').getContext('2d');
+        const ctx = resultsChartCanvas.getContext('2d');
         if (ctx) { chartInstance = new Chart(ctx, config); } 
         else { console.error("Canvas context not found."); }
     }

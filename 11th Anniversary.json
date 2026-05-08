@@ -1,5 +1,5 @@
 {
-  "lastModified": "2025-05-13T02:58:16.746Z",
+  "lastModified": "2025-05-12T06:27:15.235Z",
   "infographic": "11th Anniversary Infographic.png",
   "banners": [
     {
@@ -474,7 +474,7 @@
     },
     {
       "id": "banner-1747103913174-7988qk1k1",
-      "name": "Part 2-6",
+      "name": "Part 2-5",
       "totalMultis": 30,
       "steps": [
         {
@@ -701,5 +701,39 @@
         }
       ]
     }
-  ]
+  ],
+  "homepageAnalysisDefaults": {
+    "lineGraphs": [
+      "banner-1747024805022-0yz7x4xbq::custom::analysis-1747024903403-ryhem8xyd",
+      "banner-1747024805022-0yz7x4xbq::custom::analysis-1747081965438-zm6yzuutl",
+      "banner-1747024805022-0yz7x4xbq::custom::analysis-1747081977660-7vvfxs7wj",
+      "banner-1747103913174-7988qk1k1::custom::analysis-1747104087469-2c4t5dqd7",
+      "banner-1747103913174-7988qk1k1::custom::analysis-1747104241548-lqlpvvbi8",
+      "banner-1747103913174-7988qk1k1::single::unit-1747103913174-zwe88r3ih"
+    ],
+    "heatmaps": {
+      "newLegend": {
+        "comparisonId": "banner-1747103913174-7988qk1k1::single::unit-1747103913174-zwe88r3ih",
+        "rowIds": [
+          "banner-1747024805022-0yz7x4xbq::custom::analysis-1747024903403-ryhem8xyd",
+          "banner-1747024805022-0yz7x4xbq::custom::analysis-1747081919096-jcjmnxjwi",
+          "banner-1747024805022-0yz7x4xbq::custom::analysis-1747081936182-1trau0zhm",
+          "banner-1747024805022-0yz7x4xbq::single::unit-1747024805022-a0qtaxzvz",
+          "banner-1747024805022-0yz7x4xbq::single::unit-1747024888258-le28jjes3"
+        ]
+      },
+      "supers": {
+        "rows": [
+          {
+            "rowId": "banner-1747024805022-0yz7x4xbq::custom::analysis-1747081965438-zm6yzuutl",
+            "comparisonId": "banner-1747103913174-7988qk1k1::custom::analysis-1747104087469-2c4t5dqd7"
+          },
+          {
+            "rowId": "banner-1747024805022-0yz7x4xbq::custom::analysis-1747081977660-7vvfxs7wj",
+            "comparisonId": "banner-1747103913174-7988qk1k1::custom::analysis-1747104241548-lqlpvvbi8"
+          }
+        ]
+      }
+    }
+  }
 }

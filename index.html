@@ -3,176 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OPTC Sugofest Calculator - Multi-Banner Entry</title>
-    <link rel="stylesheet" href="style.css">
+    <title>OPTC Sugofest Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="home.css?v=20260508-refresh">
 </head>
 <body>
-    <h1>OPTC Sugofest Multi-Banner Calculator</h1>
-
-    <div class="state-controls card">
-        <h3>Manage Setups</h3>
+    <header class="app-header">
         <div>
-            <label for="saveSetupName">Save Current Multi-Banner Setup As:</label>
-            <input type="text" id="saveSetupName" placeholder="Enter setup name">
-            <button id="saveNamedStateBtn">Save</button>
+            <h1>OPTC Sugofest Calculator</h1>
         </div>
-        <div>
-            <label for="loadSetupSelect">Load Setup:</label>
-            <select id="loadSetupSelect">
-                <option value="">-- Select a saved setup --</option>
-            </select>
-            <button id="loadNamedStateBtn">Load Selected</button>
-            <button id="deleteNamedStateBtn" class="remove-button">Delete Selected</button>
-        </div>
-        <hr>
-        <h4>JSON Import / Export / Infographic</h4>
-        <div>
-            <label for="importJsonInput">Import Setup from JSON file:</label>
-            <input type="file" id="importJsonInput" accept=".json" style="width: auto;">
-            <button id="importJsonBtn" class="utility-button">Import File</button>
-	    <button id="exportJsonBtn" class="utility-button">Export Current Setup to JSON</button>
-        </div>
-        <div>
-            <label for="importImageInput">Upload Infographic Image:</label>
-            <input type="file" id="importImageInput" accept="image/*" style="width: auto;">
-            <button id="removeImageBtn" class="remove-button" style="display: none;">Remove Current Image</button>
-        </div>
-        <hr>
-        <!-- START: New Proceed Button -->
-        <div class="proceed-button-top-container">
-            <a href="results.html" target="_blank" id="calculateBtnLinkTop" class="button-link proceed-button">
-                Proceed to Calculate All Banners & View Results (New Tab)
-            </a>
-        </div>
-        <!-- END: New Proceed Button -->
-    </div>
-    <hr>
+        <nav class="header-actions" aria-label="Advanced tools">
+            <a class="secondary-link" id="advancedInputLink" href="detailed-input.html?autoLoadLast=true">Detailed Input</a>
+            <a class="primary-link" id="advancedAnalyticsLink" href="results.html">Detailed Analytics</a>
+        </nav>
+    </header>
 
-    <div id="infographicDisplayContainer" class="card" style="display: none;">
-        <img id="infographicImage" src="" alt="Infographic">
-    </div>
-    <!-- Banner Management will appear after this if an image is displayed, or directly after the HR if not -->
-
-    <div class="card">
-        <h2>Banner Management</h2>
-        <div id="bannerTabsContainer" class="banner-tabs">
-            <!-- Banner tabs will be dynamically added here -->
-        </div>
-        <div class="banner-controls">
-            <button id="addBannerBtn" class="add-button">Add New Banner</button>
-            <input type="text" id="renameBannerInput" placeholder="New name for active banner">
-            <button id="renameBannerBtn" class="utility-button">Rename Active Banner</button>
-            <button id="deleteBannerBtn" class="remove-button">Delete Active Banner</button>
-        </div>
-    </div>
-    <hr>
-    
-    <div id="activeBannerContent" class="active-banner-content">
-        <!-- Content of the currently active banner will be loaded here -->
-        <!-- This will be populated by the bannerContentTemplate -->
-    </div>
-    <hr>
-
-    <a href="results.html" target="_blank" id="calculateBtnLinkBottom" class="button-link proceed-button">
-        Proceed to Calculate All Banners & View Results (New Tab)
-    </a>
-
-    <!-- TEMPLATE FOR A SINGLE BANNER'S ENTIRE CONTENT -->
-    <template id="bannerContentTemplate">
-        <div class="banner-data-container">
-            <div class="card">
-                <h2>Global Banner Settings</h2>
-                <label>Total Number of Multis to Calculate For This Banner:</label>
-                <input type="number" class="total-multis-input" value="30" min="1" step="1">
-            </div>
-            <hr>
-            <div class="card">
-                <h2>Sugofest Step Definitions (for this banner)</h2>
-                <div class="steps-definition-container"></div>
-                <button class="add-step-btn add-button-small">Add Sugofest Step</button>
-            </div>
-            <hr>
-            <div class="card">
-                <h2>Unit Specific Rates (for this banner)</h2>
-                <div class="units-container"></div>
-                <button class="add-unit-btn add-button-small">Add Unit</button>
-            </div>
-            <hr>
-            <div class="card">
-                <h2>Custom Analysis Groups (for this banner)</h2>
-                <div class="analysis-targets-container"></div>
-                <button class="add-analysis-target-btn add-button-small">Add Custom Analysis Group</button>
-            </div>
-        </div>
-    </template>
-
-
-    <!-- SUB-TEMPLATES (used within bannerContentTemplate's sections) -->
-    <template id="unitTemplate">
-        <div class="unit-block item-block">
-            <div class="item-header">
-                <input type="text" class="unit-name" placeholder="Unit Name">
-                <label>Univ. Base Rate (%):
-                    <input type="number" class="unit-universal-base-rate" value="0.500" step="0.001" min="0">
-                </label>
-                <button class="use-base-rate-btn utility-button">Apply Univ.</button>
-                <button class="remove-item-btn remove-button">X Unit</button>
-            </div>
-            <div class="unit-steps-rates-container item-details"></div>
-        </div>
-    </template>
-
-    <template id="stepDefinitionTemplate">
-        <div class="step-definition-block item-block">
-            <div class="item-header">
-                <h4>Step <span class="step-number">1</span></h4>
-                <button class="remove-item-btn remove-button">X Step</button>
-            </div>
-            <div class="item-details">
-                <label>Multi Numbers (comma-sep):
-                    <input type="text" class="step-multis" placeholder="e.g., 1,3,5">
-                </label>
-                <label>Gem Cost:
-                   <input type="number" class="step-gem-cost" value="50" min="0" step="1">
+    <main class="home-shell">
+        <section class="banner-overview" aria-labelledby="infographicTitle">
+            <div class="overview-toolbar">
+                <label class="setup-picker" for="setupSelect">
+                    <span>Setup</span>
+                    <select id="setupSelect"></select>
                 </label>
             </div>
-        </div>
-    </template>
 
-    <template id="unitStepRateTemplate">
-        <div class="unit-step-rate-entry sub-item-block">
-            <h5>Step <span class="unit-step-number-display">X</span> (Multis: <span class="unit-step-multis-display">N/A</span>)</h5>
-            <label>Base Rate (10 pulls) (%):
-                <input type="number" class="unit-step-base-rate" value="0.500" step="0.001" min="0">
-            </label>
-            <label>Final Poster Rate (%):
-                <input type="number" class="unit-step-final-poster-rate" value="0.500" step="0.001" min="0">
-            </label>
-        </div>
-    </template>
-
-    <template id="analysisTargetTemplate">
-        <div class="analysis-target-block item-block">
-            <div class="item-header">
-                <input type="text" class="analysis-name" placeholder="Custom Group Name">
-                <button class="remove-item-btn remove-button">X Group</button>
+            <div class="banner-heading">
+                <h2 id="infographicTitle">INFOGRAPHIC</h2>
             </div>
-            <div class="item-details">
-                <p>Constituent Units:</p>
-                <div class="constituent-units-container"></div>
-                <button class="add-constituent-unit-btn add-button-small">Add Unit to Group</button>
+
+            <figure class="infographic-frame">
+                <button type="button" class="infographic-open" id="infographicOpenBtn" aria-label="Open infographic viewer">
+                    <img id="infographicImage" alt="Sugofest infographic">
+                </button>
+                <div class="empty-infographic" id="emptyInfographic">No infographic</div>
+            </figure>
+        </section>
+
+        <section class="graph-panel" aria-labelledby="overviewGraphTitle">
+            <div class="graph-header">
+                <div>
+                    <h2 id="overviewGraphTitle">Graph</h2>
+                </div>
+                <div class="metric-toggle" aria-label="Graph metric">
+                    <button type="button" class="metric-btn" data-metric="normalizedRate">Normalized Rate</button>
+                    <button type="button" class="metric-btn active" data-metric="probPullAtLeastOne">Cumulative Chance</button>
+                    <button type="button" class="metric-btn" data-metric="probSuccessOnThisMultiOnly">High Value Multis</button>
+                </div>
             </div>
-        </div>
-    </template>
 
-    <template id="constituentUnitTemplate">
-        <div class="constituent-unit-entry sub-item-block">
-            <label>Unit: <select class="constituent-unit-select"></select></label>
-            <label>Multiplier: <input type="number" class="constituent-unit-multiplier" value="1" min="1" step="1"></label>
-            <button class="remove-constituent-btn remove-button-small">X</button>
-        </div>
-    </template>
+            <div class="chart-wrap">
+                <canvas id="overviewChart"></canvas>
+            </div>
+            <div class="overview-legend" id="overviewLegend"></div>
+        </section>
 
-    <script src="script.js"></script>
+        <section class="heatmap-panel" aria-labelledby="overviewHeatmapTitle">
+            <div class="graph-header">
+                <div>
+                    <h2 id="overviewHeatmapTitle">Average Gems Heat Maps</h2>
+                </div>
+            </div>
+            <div id="overviewHeatmapContainer" class="heatmap-container"></div>
+        </section>
+    </main>
+
+    <div class="image-viewer" id="imageViewer" aria-hidden="true">
+        <div class="viewer-toolbar">
+            <button type="button" id="zoomOutBtn">-</button>
+            <button type="button" id="zoomResetBtn">100%</button>
+            <button type="button" id="zoomInBtn">+</button>
+            <button type="button" id="closeViewerBtn">Close</button>
+        </div>
+        <div class="viewer-stage" id="viewerStage">
+            <img id="viewerImage" alt="Sugofest infographic full view">
+        </div>
+    </div>
+
+    <script src="home.js?v=20260508-refresh"></script>
 </body>
 </html>

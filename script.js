@@ -18,6 +18,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const importJsonInput = document.getElementById('importJsonInput');
     const importJsonBtn = document.getElementById('importJsonBtn');
     const exportJsonBtn = document.getElementById('exportJsonBtn');
+    const homeGraphDefaultsContainer = document.getElementById('homeGraphDefaultsContainer');
+    const selectHomeGraphCustomBtn = document.getElementById('selectHomeGraphCustomBtn');
+    const selectAllHomeGraphDefaultsBtn = document.getElementById('selectAllHomeGraphDefaultsBtn');
+    const clearHomeGraphDefaultsBtn = document.getElementById('clearHomeGraphDefaultsBtn');
+    const heatmapNewLegendComparisonSelect = document.getElementById('heatmapNewLegendComparisonSelect');
+    const heatmapNewLegendRowsContainer = document.getElementById('heatmapNewLegendRowsContainer');
+    const heatmapSupersRowsContainer = document.getElementById('heatmapSupersRowsContainer');
+    const addSupersHeatmapRowBtn = document.getElementById('addSupersHeatmapRowBtn');
+    const heatmapPairRowTemplate = document.getElementById('heatmapPairRowTemplate');
 
     // Infographic DOM Elements
     const importImageInput = document.getElementById('importImageInput');
@@ -36,12 +45,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- State ---
     let appState = {
         banners: [],
-        infographic: null // Will store the FILENAME (string) or null
+        infographic: null, // Will store the FILENAME (string) or null
+        homeGraphDefaults: [],
+        heatmapDefaults: null
     };
     let activeBannerId = null;
     let globalDefaultUnitNameCounter = 0;
     const SAVED_SETUPS_KEY = 'sugofestMultiBannerSetups_v2'; 
     const LAST_CALCULATED_STATE_KEY = '__last_calculated_banner_state_v2__';
+    const SELECTED_SETUP_KEY = 'sugofestHomepageSelectedSetupKey';
     const DEFAULT_SETUPS_MANIFEST_PATH = 'default-setups-manifest.json';
     const DEFAULT_RATE_STRING = "0.000";
 
@@ -57,6 +69,268 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     function getFilenameWithoutExtension(filename) {
         return filename.substring(0, filename.lastIndexOf('.')) || filename;
+    }
+
+    function getHomeGraphAnalysisId(banner, analysis) {
+        if (analysis.type === 'single_unit') return `${banner.id}::single::${analysis.unitId}`;
+        return `${banner.id}::custom::${analysis.analysisId}`;
+    }
+
+    function getHomeGraphAnalysisOptions(banners = appState.banners) {
+        const options = [];
+        banners.forEach(banner => {
+            (banner.units || []).forEach(unit => {
+                const analysis = {
+                    type: 'single_unit',
+                    unitId: unit.id,
+                    name: unit.name || 'Unit'
+                };
+                options.push({
+                    id: getHomeGraphAnalysisId(banner, analysis),
+                    bannerId: banner.id,
+                    bannerName: banner.name || 'Banner',
+                    label: analysis.name,
+                    isCustom: false
+                });
+            });
+
+            (banner.customAnalyses || []).forEach(group => {
+                if (!Array.isArray(group.constituents) || !group.constituents.some(c => c.unitId)) return;
+                const analysis = {
+                    type: 'custom_group',
+                    analysisId: group.id,
+                    name: group.name || 'Group'
+                };
+                options.push({
+                    id: getHomeGraphAnalysisId(banner, analysis),
+                    bannerId: banner.id,
+                    bannerName: banner.name || 'Banner',
+                    label: analysis.name,
+                    isCustom: true
+                });
+            });
+        });
+        return options;
+    }
+
+    function getDefaultHomeGraphDefaults(banners = appState.banners) {
+        const options = getHomeGraphAnalysisOptions(banners);
+        const customIds = options.filter(option => option.isCustom).map(option => option.id);
+        return customIds.length > 0 ? customIds : options.slice(0, 8).map(option => option.id);
+    }
+
+    function findAnalysisOptionByName(options, bannerName, analysisName) {
+        return options.find(option => option.bannerName === bannerName && option.label === analysisName) || null;
+    }
+
+    function getDefaultHeatmapDefaults(banners = appState.banners) {
+        const options = getHomeGraphAnalysisOptions(banners);
+        const newLegendComparison = findAnalysisOptionByName(options, 'Part 2-6', 'New 11th Anni Legend');
+        const newLegendRows = [
+            'Monster Trio + Kizaru + Nami',
+            'Monster Trio + Kizaru',
+            '1 New Super + Nami',
+            'Monster Trio or Kizaru',
+            'Nami'
+        ].map(name => findAnalysisOptionByName(options, 'Part 1', name)?.id).filter(Boolean);
+
+        const supersRows = [
+            {
+                rowId: findAnalysisOptionByName(options, 'Part 1', 'All Supers')?.id || '',
+                comparisonId: findAnalysisOptionByName(options, 'Part 2-6', 'All Supers (P2-5)')?.id || ''
+            },
+            {
+                rowId: findAnalysisOptionByName(options, 'Part 1', 'All Supers + Annis')?.id || '',
+                comparisonId: findAnalysisOptionByName(options, 'Part 2-6', 'All Supers + Anni (P2-5)')?.id || ''
+            }
+        ].filter(row => row.rowId || row.comparisonId);
+
+        return {
+            newLegend: {
+                comparisonId: newLegendComparison?.id || '',
+                rowIds: newLegendRows
+            },
+            supers: {
+                rows: supersRows
+            }
+        };
+    }
+
+    function normalizeHeatmapDefaults() {
+        const validIds = new Set(getHomeGraphAnalysisOptions().map(option => option.id));
+        const fallback = getDefaultHeatmapDefaults();
+        const current = appState.heatmapDefaults || fallback;
+        appState.heatmapDefaults = {
+            newLegend: {
+                comparisonId: validIds.has(current.newLegend?.comparisonId) ? current.newLegend.comparisonId : fallback.newLegend.comparisonId,
+                rowIds: Array.from(new Set((current.newLegend?.rowIds || fallback.newLegend.rowIds || []).filter(id => validIds.has(id))))
+            },
+            supers: {
+                rows: (current.supers?.rows || fallback.supers.rows || [])
+                    .map(row => ({
+                        rowId: validIds.has(row.rowId) ? row.rowId : '',
+                        comparisonId: validIds.has(row.comparisonId) ? row.comparisonId : ''
+                    }))
+                    .filter(row => row.rowId || row.comparisonId)
+            }
+        };
+    }
+
+    function buildDefaultHeatmapDefaultsForBanners(banners) {
+        const previousBanners = appState.banners;
+        appState.banners = banners;
+        const defaults = getDefaultHeatmapDefaults(banners);
+        appState.banners = previousBanners;
+        return defaults;
+    }
+
+    function getHomepageAnalysisDefaults() {
+        normalizeHomeGraphDefaults();
+        normalizeHeatmapDefaults();
+        return {
+            lineGraphs: appState.homeGraphDefaults || [],
+            heatmaps: appState.heatmapDefaults || getDefaultHeatmapDefaults()
+        };
+    }
+
+    function applyHomepageAnalysisDefaults(defaults, banners = appState.banners) {
+        appState.homeGraphDefaults = Array.isArray(defaults?.lineGraphs)
+            ? defaults.lineGraphs
+            : Array.isArray(defaults?.homeGraphDefaults)
+                ? defaults.homeGraphDefaults
+                : Array.isArray(defaults)
+                    ? defaults
+                    : getDefaultHomeGraphDefaults(banners);
+        appState.heatmapDefaults = defaults?.heatmaps || defaults?.heatmapDefaults || getDefaultHeatmapDefaults(banners);
+    }
+
+    function normalizeHomeGraphDefaults() {
+        const validIds = new Set(getHomeGraphAnalysisOptions().map(option => option.id));
+        const selectedIds = Array.isArray(appState.homeGraphDefaults) ? appState.homeGraphDefaults : [];
+        appState.homeGraphDefaults = Array.from(new Set(selectedIds.filter(id => validIds.has(id))));
+    }
+
+    function renderHomeGraphDefaults() {
+        if (!homeGraphDefaultsContainer) return;
+
+        normalizeHomeGraphDefaults();
+        normalizeHeatmapDefaults();
+        homeGraphDefaultsContainer.innerHTML = '';
+        if (heatmapNewLegendRowsContainer) heatmapNewLegendRowsContainer.innerHTML = '';
+        if (heatmapSupersRowsContainer) heatmapSupersRowsContainer.innerHTML = '';
+
+        const options = getHomeGraphAnalysisOptions();
+        if (options.length === 0) {
+            const emptyMessage = document.createElement('p');
+            emptyMessage.className = 'home-graph-empty';
+            emptyMessage.textContent = 'No graph lines available yet.';
+            homeGraphDefaultsContainer.appendChild(emptyMessage);
+            return;
+        }
+
+        const selectedIds = new Set(appState.homeGraphDefaults);
+        appState.banners.forEach(banner => {
+            const bannerOptions = options.filter(option => option.bannerId === banner.id);
+            if (bannerOptions.length === 0) return;
+
+            const group = document.createElement('section');
+            group.className = 'home-graph-banner';
+
+            const heading = document.createElement('h3');
+            heading.textContent = banner.name || 'Banner';
+            group.appendChild(heading);
+
+            const optionList = document.createElement('div');
+            optionList.className = 'home-graph-options';
+
+            bannerOptions.forEach(option => {
+                const label = document.createElement('label');
+                label.className = 'home-graph-option';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'home-graph-default-input';
+                checkbox.dataset.analysisId = option.id;
+                checkbox.checked = selectedIds.has(option.id);
+
+                const text = document.createElement('span');
+                text.textContent = option.label;
+
+                label.append(checkbox, text);
+                optionList.appendChild(label);
+            });
+
+            group.appendChild(optionList);
+            homeGraphDefaultsContainer.appendChild(group);
+        });
+
+        renderHeatmapDefaults(options);
+    }
+
+    function addAnalysisOptionsToSelect(select, options, selectedId) {
+        select.innerHTML = '';
+        select.add(new Option('-- Select analysis --', ''));
+        appState.banners.forEach(banner => {
+            const bannerOptions = options.filter(option => option.bannerId === banner.id);
+            if (bannerOptions.length === 0) return;
+            const group = document.createElement('optgroup');
+            group.label = banner.name || 'Banner';
+            bannerOptions.forEach(option => group.appendChild(new Option(option.label, option.id)));
+            select.appendChild(group);
+        });
+        select.value = selectedId || '';
+    }
+
+    function renderHeatmapDefaults(options = getHomeGraphAnalysisOptions()) {
+        if (!appState.heatmapDefaults) appState.heatmapDefaults = getDefaultHeatmapDefaults();
+        if (heatmapNewLegendComparisonSelect) {
+            addAnalysisOptionsToSelect(heatmapNewLegendComparisonSelect, options, appState.heatmapDefaults.newLegend.comparisonId);
+        }
+
+        if (heatmapNewLegendRowsContainer) {
+            const selectedIds = new Set(appState.heatmapDefaults.newLegend.rowIds || []);
+            appState.banners.forEach(banner => {
+                const bannerOptions = options.filter(option => option.bannerId === banner.id);
+                if (bannerOptions.length === 0) return;
+
+                const group = document.createElement('section');
+                group.className = 'home-graph-banner';
+                const heading = document.createElement('h3');
+                heading.textContent = banner.name || 'Banner';
+                group.appendChild(heading);
+
+                const optionList = document.createElement('div');
+                optionList.className = 'home-graph-options';
+                bannerOptions.forEach(option => {
+                    const label = document.createElement('label');
+                    label.className = 'home-graph-option';
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'heatmap-new-legend-row-input';
+                    checkbox.dataset.analysisId = option.id;
+                    checkbox.checked = selectedIds.has(option.id);
+                    const text = document.createElement('span');
+                    text.textContent = option.label;
+                    label.append(checkbox, text);
+                    optionList.appendChild(label);
+                });
+                group.appendChild(optionList);
+                heatmapNewLegendRowsContainer.appendChild(group);
+            });
+        }
+
+        if (heatmapSupersRowsContainer && heatmapPairRowTemplate) {
+            const rows = appState.heatmapDefaults.supers.rows || [];
+            rows.forEach(row => renderSupersHeatmapRow(options, row));
+        }
+    }
+
+    function renderSupersHeatmapRow(options, row = { rowId: '', comparisonId: '' }) {
+        const fragment = heatmapPairRowTemplate.content.cloneNode(true);
+        const rowEl = fragment.querySelector('.heatmap-pair-row');
+        addAnalysisOptionsToSelect(fragment.querySelector('.heatmap-row-analysis-select'), options, row.rowId);
+        addAnalysisOptionsToSelect(fragment.querySelector('.heatmap-comparison-analysis-select'), options, row.comparisonId);
+        heatmapSupersRowsContainer.appendChild(rowEl);
     }
 
     // --- INFOGRAPHIC HANDLING ---
@@ -430,6 +704,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             newBannerData.units.push(defaultUnit);
         }
         setActiveBanner(bannerId);
+        renderHomeGraphDefaults();
         return bannerId;
     }
 
@@ -482,13 +757,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderBannerTabs();
         if (activeBannerId) setActiveBanner(activeBannerId);
         else activeBannerContent.innerHTML = '<p>No active banner.</p>';
+        renderHomeGraphDefaults();
     }
     function renameActiveBanner() { 
         if (!activeBannerId) return;
         const newName = renameBannerInput.value.trim();
         if (!newName) { alert("Banner name cannot be empty."); return; }
         const banner = findBannerById(activeBannerId);
-        if (banner) { banner.name = newName; renderBannerTabs(); }
+        if (banner) { banner.name = newName; renderBannerTabs(); renderHomeGraphDefaults(); }
     }
     function findBannerById(id) { return appState.banners.find(b => b.id === id); }
     
@@ -508,6 +784,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     addBannerBtn.addEventListener('click', () => addBanner(null)); 
     renameBannerBtn.addEventListener('click', renameActiveBanner);
     deleteBannerBtn.addEventListener('click', deleteActiveBanner);
+
+    if (homeGraphDefaultsContainer) {
+        homeGraphDefaultsContainer.addEventListener('change', (e) => {
+            if (!e.target.matches('.home-graph-default-input')) return;
+            const selectedIds = new Set(appState.homeGraphDefaults);
+            if (e.target.checked) selectedIds.add(e.target.dataset.analysisId);
+            else selectedIds.delete(e.target.dataset.analysisId);
+            appState.homeGraphDefaults = Array.from(selectedIds);
+            normalizeHomeGraphDefaults();
+        });
+    }
+
+    if (heatmapNewLegendComparisonSelect) {
+        heatmapNewLegendComparisonSelect.addEventListener('change', () => {
+            normalizeHeatmapDefaults();
+            appState.heatmapDefaults.newLegend.comparisonId = heatmapNewLegendComparisonSelect.value;
+        });
+    }
+
+    if (heatmapNewLegendRowsContainer) {
+        heatmapNewLegendRowsContainer.addEventListener('change', (e) => {
+            if (!e.target.matches('.heatmap-new-legend-row-input')) return;
+            normalizeHeatmapDefaults();
+            const selectedIds = new Set(appState.heatmapDefaults.newLegend.rowIds || []);
+            if (e.target.checked) selectedIds.add(e.target.dataset.analysisId);
+            else selectedIds.delete(e.target.dataset.analysisId);
+            appState.heatmapDefaults.newLegend.rowIds = Array.from(selectedIds);
+        });
+    }
+
+    if (heatmapSupersRowsContainer) {
+        heatmapSupersRowsContainer.addEventListener('change', () => {
+            appState.heatmapDefaults = appState.heatmapDefaults || getDefaultHeatmapDefaults();
+            appState.heatmapDefaults.supers.rows = Array.from(heatmapSupersRowsContainer.querySelectorAll('.heatmap-pair-row')).map(row => ({
+                rowId: row.querySelector('.heatmap-row-analysis-select')?.value || '',
+                comparisonId: row.querySelector('.heatmap-comparison-analysis-select')?.value || ''
+            })).filter(row => row.rowId || row.comparisonId);
+        });
+        heatmapSupersRowsContainer.addEventListener('click', (e) => {
+            if (!e.target.matches('.remove-heatmap-row-btn')) return;
+            e.target.closest('.heatmap-pair-row')?.remove();
+            heatmapSupersRowsContainer.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    if (addSupersHeatmapRowBtn) {
+        addSupersHeatmapRowBtn.addEventListener('click', () => {
+            renderSupersHeatmapRow(getHomeGraphAnalysisOptions());
+            heatmapSupersRowsContainer.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    }
+
+    if (selectHomeGraphCustomBtn) {
+        selectHomeGraphCustomBtn.addEventListener('click', () => {
+            const options = getHomeGraphAnalysisOptions();
+            const customIds = options.filter(option => option.isCustom).map(option => option.id);
+            appState.homeGraphDefaults = customIds.length > 0 ? customIds : getDefaultHomeGraphDefaults();
+            renderHomeGraphDefaults();
+        });
+    }
+
+    if (selectAllHomeGraphDefaultsBtn) {
+        selectAllHomeGraphDefaultsBtn.addEventListener('click', () => {
+            appState.homeGraphDefaults = getHomeGraphAnalysisOptions().map(option => option.id);
+            renderHomeGraphDefaults();
+        });
+    }
+
+    if (clearHomeGraphDefaultsBtn) {
+        clearHomeGraphDefaultsBtn.addEventListener('click', () => {
+            appState.homeGraphDefaults = [];
+            renderHomeGraphDefaults();
+        });
+    }
 
     activeBannerContent.addEventListener('click', (e) => { 
         const currentBanner = findBannerById(activeBannerId);
@@ -576,6 +926,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             constituentEntry.remove();
         }
+        renderHomeGraphDefaults();
     });
 
     activeBannerContent.addEventListener('change', (e) => { 
@@ -647,6 +998,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.target.matches('.constituent-unit-multiplier')) constituentInModel.multiplier = parseInt(e.target.value) || 1;
             }
         }
+        renderHomeGraphDefaults();
     });
 
     // --- NAMED SAVE/LOAD STATE ---
@@ -725,6 +1077,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     function getCurrentState() { 
         // Make sure appState.infographic is current before stringifying
+        normalizeHomeGraphDefaults();
+        normalizeHeatmapDefaults();
         return JSON.parse(JSON.stringify(appState)); 
     }
     
@@ -804,11 +1158,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
 
-    function applyState(loadedAppState) { // loadedAppState is { banners: [], infographic: filename | null }
+    function applyState(loadedAppState) { // loadedAppState is { banners: [], infographic: filename | null, homeGraphDefaults?: [] }
         appState.banners = []; // Reset banners
         activeBannerId = null; 
         activeBannerContent.innerHTML = ''; 
         globalDefaultUnitNameCounter = 0;
+        const loadedHomepageDefaults = loadedAppState?.homepageAnalysisDefaults || {
+            lineGraphs: loadedAppState?.homeGraphDefaults,
+            heatmaps: loadedAppState?.heatmapDefaults
+        };
         
         // Defensively handle banners array
         const bannersToLoad = loadedAppState && Array.isArray(loadedAppState.banners) ? loadedAppState.banners : [];
@@ -818,6 +1176,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Set infographic filename, defaulting to null if missing or not a string
         appState.infographic = (loadedAppState && typeof loadedAppState.infographic === 'string') ? loadedAppState.infographic : null;
+        applyHomepageAnalysisDefaults(loadedHomepageDefaults, appState.banners);
+        normalizeHomeGraphDefaults();
+        normalizeHeatmapDefaults();
         
         renderInfographic(); // Render based on the loaded filename (or null)
 
@@ -827,7 +1188,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             // If loading resulted in no banners (e.g., empty or invalid input), add a default one
             addBanner(null); 
+            applyHomepageAnalysisDefaults(null, appState.banners);
         }
+        renderHomeGraphDefaults();
     }
 
     // --- JSON IMPORT/EXPORT & SERVER AUTO-LOAD ---
@@ -868,6 +1231,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                      // Banners are optional for loading (applyState will handle missing/invalid)
                     const serverBanners = Array.isArray(serverSetup.banners) ? serverSetup.banners : [];
                     const serverInfographic = typeof serverSetup.infographic === 'string' ? serverSetup.infographic : null;
+                    const sanitizedServerBanners = sanitizeBannersData(serverBanners);
+                    const serverHomepageDefaults = serverSetup.homepageAnalysisDefaults || {
+                        lineGraphs: serverSetup.homeGraphDefaults || getDefaultHomeGraphDefaults(sanitizedServerBanners),
+                        heatmaps: serverSetup.heatmapDefaults || buildDefaultHeatmapDefaultsForBanners(sanitizedServerBanners)
+                    };
 
                     const baseFilename = getFilenameWithoutExtension(filename);
                     const displayName = `${baseFilename} (${new Date(serverSetup.lastModified).toLocaleDateString()})`;
@@ -878,8 +1246,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         originalFilename: filename, 
                         lastModified: serverSetup.lastModified,
                         data: { // Store as full appState structure
-                            banners: sanitizeBannersData(serverBanners),
-                            infographic: serverInfographic 
+                            banners: sanitizedServerBanners,
+                            infographic: serverInfographic,
+                            homepageAnalysisDefaults: serverHomepageDefaults,
+                            homeGraphDefaults: serverHomepageDefaults.lineGraphs,
+                            heatmapDefaults: serverHomepageDefaults.heatmaps
                         }
                     };
                     setupsModified = true;
@@ -900,24 +1271,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 
     exportJsonBtn.addEventListener('click', () => {
-        const currentState = getCurrentState(); // { banners, infographic: filename | null }
-        const jsonToExport = {
-            lastModified: getCurrentTimestamp(),
-            infographic: currentState.infographic, // This is now the filename or null
-            banners: currentState.banners 
-        };
-        const jsonString = JSON.stringify(jsonToExport, null, 2);
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        const timestampForFile = jsonToExport.lastModified.replace(/[:.]/g, '-');
-        a.href = url;
-        a.download = `sugofest_setup_${timestampForFile}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        alert('Current setup exported to JSON file.');
+        try {
+            const currentState = getCurrentState(); // { banners, infographic: filename | null }
+            const jsonToExport = {
+                lastModified: getCurrentTimestamp(),
+                infographic: currentState.infographic, // This is now the filename or null
+                banners: currentState.banners,
+                homepageAnalysisDefaults: getHomepageAnalysisDefaults()
+            };
+            const jsonString = JSON.stringify(jsonToExport, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const timestampForFile = jsonToExport.lastModified.replace(/[:.]/g, '-');
+            a.href = url;
+            a.download = `sugofest_setup_${timestampForFile}.json`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                URL.revokeObjectURL(url);
+                a.remove();
+            }, 1000);
+            alert('Current setup exported to JSON file.');
+        } catch (error) {
+            console.error('Error exporting JSON:', error);
+            alert(`Error exporting JSON: ${error.message}`);
+        }
     });
 
     importJsonBtn.addEventListener('click', () => {
@@ -949,10 +1329,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 storageKey = `${storageKey}${counter > 1 ? '_'+counter : ''}`;
 
                 // Prepare the data object for applyState and saving
+                const sanitizedImportedBanners = sanitizeBannersData(importedSetup.banners);
                 const importedData = {
-                    banners: sanitizeBannersData(importedSetup.banners), // Sanitize, handles null/undefined banners
-                    infographic: typeof importedSetup.infographic === 'string' ? importedSetup.infographic : null // Get filename or null
+                    banners: sanitizedImportedBanners, // Sanitize, handles null/undefined banners
+                    infographic: typeof importedSetup.infographic === 'string' ? importedSetup.infographic : null, // Get filename or null
+                    homepageAnalysisDefaults: importedSetup.homepageAnalysisDefaults || {
+                        lineGraphs: Array.isArray(importedSetup.homeGraphDefaults)
+                            ? importedSetup.homeGraphDefaults
+                            : getDefaultHomeGraphDefaults(sanitizedImportedBanners),
+                        heatmaps: importedSetup.heatmapDefaults || buildDefaultHeatmapDefaultsForBanners(sanitizedImportedBanners)
+                    }
                 };
+                importedData.homeGraphDefaults = importedData.homepageAnalysisDefaults.lineGraphs;
+                importedData.heatmapDefaults = importedData.homepageAnalysisDefaults.heatmaps;
 
                 // Save the full structure to local storage
                 allSetups[storageKey] = {
@@ -981,38 +1370,53 @@ document.addEventListener('DOMContentLoaded', async () => {
         reader.readAsText(file);
     });
 
+    function buildDataForAllBanners() {
+        return appState.banners.map(bannerData => {
+            const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
+            const customGroupAnalyses = (bannerData.customAnalyses || []).map(cg => ({
+                bannerName: bannerData.name, name: cg.name, type: "custom_group", analysisId: cg.id,
+                constituents: (cg.constituents || []).filter(c => c.unitId)
+            })).filter(cg => cg.constituents && cg.constituents.length > 0);
+            return {
+                bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
+                units: bannerData.units,
+                stepDefinitions: bannerData.steps,
+                analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
+            };
+        }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
+    }
+
+    function saveCurrentStateForLinkedPages(selectOnHome = false) {
+        const dataForAllBanners = buildDataForAllBanners();
+
+        localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify({
+            lastModified: getCurrentTimestamp(),
+            data: getCurrentState()
+        }));
+
+        localStorage.setItem('sugofestCalcSetup', JSON.stringify({
+            allBannerData: dataForAllBanners,
+            homepageAnalysisDefaults: getHomepageAnalysisDefaults()
+        }));
+        if (selectOnHome) localStorage.setItem(SELECTED_SETUP_KEY, 'CURRENT_WORKING_SETUP');
+        return dataForAllBanners;
+    }
+
+    document.querySelectorAll('.app-header a').forEach(link => {
+        link.addEventListener('click', () => {
+            saveCurrentStateForLinkedPages(link.getAttribute('href') === 'index.html');
+        });
+    });
+
     // --- DATA COLLECTION FOR RESULTS PAGE (Attached to both .proceed-button elements) ---
     calculateBtnLinks.forEach(btn => {
         btn.addEventListener('click', (e) => {
-            // Use appState.banners for data collection
-            const dataForAllBanners = appState.banners.map(bannerData => {
-                const singleUnitAnalyses = bannerData.units.map(u => ({ bannerName: bannerData.name, name: u.name, type: "single_unit", unitId: u.id }));
-                const customGroupAnalyses = (bannerData.customAnalyses || []).map(cg => ({
-                    bannerName: bannerData.name, name: cg.name, type: "custom_group", 
-                    constituents: (cg.constituents || []).filter(c => c.unitId) 
-                })).filter(cg => cg.constituents && cg.constituents.length > 0);
-                return {
-                    bannerId: bannerData.id, bannerName: bannerData.name, totalMultis: bannerData.totalMultis,
-                    units: bannerData.units, 
-                    stepDefinitions: bannerData.steps, 
-                    analysesToPerformOnResultsPage: [...singleUnitAnalyses, ...customGroupAnalyses]
-                };
-            }).filter(b => b.analysesToPerformOnResultsPage.length > 0);
+            const dataForAllBanners = saveCurrentStateForLinkedPages();
 
-            if (dataForAllBanners.length === 0) { 
-                alert("No units or custom analysis groups are defined in any banner. Please add some to proceed."); 
-                e.preventDefault(); 
-                return; 
+            if (dataForAllBanners.length === 0) {
+                alert("No units or custom analysis groups are defined in any banner. Please add some to proceed.");
+                e.preventDefault();
             }
-            
-            // Save the full current state (including infographic filename) to LAST_CALCULATED_STATE_KEY
-            localStorage.setItem(LAST_CALCULATED_STATE_KEY, JSON.stringify({
-                lastModified: getCurrentTimestamp(),
-                data: getCurrentState() // getCurrentState() returns { banners, infographic: filename | null }
-            })); 
-            
-            // For results.js, only banner data is needed.
-            localStorage.setItem('sugofestCalcSetup', JSON.stringify({ allBannerData: dataForAllBanners }));
         });
     });
 
@@ -1085,8 +1489,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!stateLoaded) { 
             console.log("No saved state found, initializing with a default banner.");
             // Initialize appState with default empty/null values before adding banner
-            appState = { banners: [], infographic: null };
+            appState = { banners: [], infographic: null, homeGraphDefaults: [], heatmapDefaults: null };
             addBanner(null); // Adds a default banner to appState.banners
+            applyHomepageAnalysisDefaults(null, appState.banners);
+            renderHomeGraphDefaults();
             renderInfographic(); // Ensure infographic display is hidden
         }
         // Note: applyState already calls renderInfographic, so no extra call needed here

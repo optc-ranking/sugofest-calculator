@@ -5,28 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sugofest Calculation Results</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="results_style.css">
+    <link rel="stylesheet" href="results_style.css?v=20260508-refresh">
 </head>
 <body>
-    <header>
+    <header class="app-header">
         <h1>Sugofest Analysis Results</h1>
-        <p><a href="index.html" id="backToEntryLink" class="back-link">« Back to Data Entry</a></p>
+        <nav class="header-actions" aria-label="Page navigation">
+            <a href="index.html" id="backToEntryLink" class="secondary-link">Overview</a>
+            <a href="detailed-input.html?autoLoadLast=true" class="primary-link">Detailed Input</a>
+        </nav>
     </header>
 
     <main>
         <div class="results-controls card">
-            <label for="rateTypeSelect">Display on Graph:</label>
+            <label for="rateTypeSelect">Metric</label>
             <select id="rateTypeSelect">
                 <option value="normalizedRate" selected>Normalized Rate</option>
                 <option value="probPullAtLeastOne">Cumulative Pull Chance</option>
                 <option value="probSuccessOnThisMultiOnly">High Value Multis</option>
+                <option value="evHeatMap">Average Gems Heat Map</option>
             </select>
         </div>
 
         <!-- START: Select/Deselect All Buttons -->
         <div class="checklist-bulk-controls card">
-            <button id="selectAllBtn" class="utility-button utility-button-small">Select All Graphs</button>
-            <button id="deselectAllBtn" class="utility-button utility-button-small">Deselect All Graphs</button>
+            <button id="selectAllBtn" class="utility-button utility-button-small">Select All</button>
+            <button id="deselectAllBtn" class="utility-button utility-button-small">Deselect All</button>
         </div>
         <!-- END: Select/Deselect All Buttons -->
 
@@ -37,19 +41,17 @@
         <div id="chartContainerOuter" class="card">
             <div id="chartContainer">
                  <canvas id="resultsChart"></canvas>
+                 <div id="heatmapContainer" class="heatmap-container" hidden></div>
             </div>
         </div>
 
         <div class="card download-section">
-            <h3>Download Detailed Analysis Data</h3>
-            <p>The following CSV contains per-multi probabilities and conditional average costs, calculated iteratively up to a fixed multi limit. Useful for deep dives and spreadsheet modeling.</p>
+            <h3>CSV</h3>
             <button id="downloadDetailCsvBtn" class="utility-button">Download Detailed EV Analysis (.csv)</button>
-            <hr class="download-hr">
-            <p>The following CSV contains the data points used to generate the displayed graphs (Normalized Rate, Cumulative Pull Chance, and High Value Multis).</p>
             <button id="downloadGraphCsvBtn" class="utility-button">Download Graph Data (.csv)</button>
         </div>
     </main>
 
-    <script src="results.js"></script>
+    <script src="results.js?v=20260508-refresh"></script>
 </body>
 </html>
