@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let setups = [];
     let currentSetup = null;
-    let activeMetric = 'probPullAtLeastOne';
+    let activeMetric = 'normalizedRate';
     let chartInstance = null;
     let imageZoom = 1;
     let imageFitZoom = 1;
