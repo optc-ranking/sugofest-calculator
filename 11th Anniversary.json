@@ -474,7 +474,7 @@
     },
     {
       "id": "banner-1747103913174-7988qk1k1",
-      "name": "Part 2-5",
+      "name": "Part 2-6",
       "totalMultis": 30,
       "steps": [
         {
@@ -647,7 +647,7 @@
       "customAnalyses": [
         {
           "id": "analysis-1747104087469-2c4t5dqd7",
-          "name": "All Supers (P2-5)",
+          "name": "All Supers (P2-6)",
           "type": "custom_group",
           "constituents": [
             {
@@ -674,7 +674,7 @@
         },
         {
           "id": "analysis-1747104241548-lqlpvvbi8",
-          "name": "All Supers + Anni (P2-5)",
+          "name": "All Supers + Anni (P2-6)",
           "type": "custom_group",
           "constituents": [
             {
