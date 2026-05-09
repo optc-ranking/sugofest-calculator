@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OPTC Sugofest Calculator</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="home.css?v=20260508-refresh">
+    <link rel="stylesheet" href="home.css?v=20260508-high-value-filter">
 </head>
 <body>
     <header class="app-header">
@@ -50,6 +50,14 @@
                     <button type="button" class="metric-btn" data-metric="probSuccessOnThisMultiOnly">High Value Multis</button>
                 </div>
             </div>
+            <div class="high-value-filter" id="highValueFilter" hidden>
+                <span>Show</span>
+                <div class="part-toggle" aria-label="High Value Multis banner filter">
+                    <button type="button" class="part-filter-btn active" data-part-filter="both">Both</button>
+                    <button type="button" class="part-filter-btn" data-part-filter="part1">Part 1</button>
+                    <button type="button" class="part-filter-btn" data-part-filter="part2-6">Part 2-6</button>
+                </div>
+            </div>
 
             <div class="chart-wrap">
                 <canvas id="overviewChart"></canvas>
@@ -79,6 +87,6 @@
         </div>
     </div>
 
-    <script src="home.js?v=20260508-refresh"></script>
+    <script src="home.js?v=20260508-tight-y-axis"></script>
 </body>
 </html>

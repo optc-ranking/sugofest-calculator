@@ -32,7 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const rateTypeSelect = document.getElementById('rateTypeSelect');
     const heatmapContainer = document.getElementById('heatmapContainer');
     const resultsChartCanvas = document.getElementById('resultsChart');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const zoomResetBtn = document.getElementById('zoomResetBtn');
+    const chartZoomControls = document.getElementById('chartZoomControls');
     let chartInstance = null;
+    let chartYZoomMax = null;
+    let chartFullYMax = 100;
     const allCalculatedResults = []; 
     
     const assignedColors = {}; 
@@ -677,6 +683,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return [multiHeaders, cumulativeGemsSpentArray, cumulativeProbNotPullArray, probSuccessThisMultiArray, conditionalEVArray];
     }
 
+    function clampYZoomMax(max) {
+        if (!Number.isFinite(max) || max >= chartFullYMax) return null;
+        const minMax = Math.min(chartFullYMax, Math.max(0.1, chartFullYMax * 0.08));
+        return Math.max(minMax, max);
+    }
+
+    function setChartYZoomMax(max) {
+        chartYZoomMax = clampYZoomMax(max);
+        updateChart();
+    }
+
+    function zoomChart(factor, anchor = null) {
+        const currentMax = chartYZoomMax || chartFullYMax;
+        const anchorValue = Number.isFinite(anchor) ? anchor : currentMax;
+        const nextMax = anchorValue + (currentMax - anchorValue) * factor;
+        setChartYZoomMax(nextMax);
+    }
+
     // --- Process each banner for display (checklist, etc.) ---
     allBannerData.forEach(banner => { 
         const maxMultisForThisBannerGraph = parseInt(banner.totalMultis) || 30; 
@@ -738,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const heatmapMode = selectedRateTypeKey === "evHeatMap";
         if (resultsChartCanvas) resultsChartCanvas.hidden = heatmapMode;
         if (heatmapContainer) heatmapContainer.hidden = !heatmapMode;
+        if (chartZoomControls) chartZoomControls.hidden = heatmapMode;
         if (heatmapMode) {
             if (chartInstance) {
                 chartInstance.destroy();
@@ -824,6 +849,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const data = { datasets: datasets };
         const xAxisMaxMultis = Math.max(...allBannerData.map(b => parseInt(b.totalMultis) || 0), 30);
+        chartFullYMax = yAxisConfiguredMax || 100;
+        chartYZoomMax = clampYZoomMax(chartYZoomMax);
+        const yAxisMax = chartYZoomMax || chartFullYMax;
 
         const config = {
             type: 'line',
@@ -836,23 +864,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         type: 'linear',
                         title: { display: true, text: 'Multi Number', font: {size: 14, weight: 'bold'} },
                         min: 1,
-                        max: xAxisMaxMultis, 
+                        max: xAxisMaxMultis,
                         ticks: { 
-                            stepSize: Math.max(1, Math.floor(xAxisMaxMultis / 20)), 
+                            stepSize: Math.max(1, Math.floor(xAxisMaxMultis / 20)),
                             font: {size: 12}
                         }
                     },
                     y: {
                         title: { display: true, text: getYAxisLabel(selectedRateTypeKey), font: {size: 14, weight: 'bold'} },
                         beginAtZero: true, min: 0,
-                        max: yAxisConfiguredMax, 
+                        max: yAxisMax,
                         ticks: {
                             callback: function(value) { 
                                 let precision = 0;
-                                if (yAxisConfiguredMax <= 0.5) precision = 2; 
-                                else if (yAxisConfiguredMax <= 2) precision = 2; 
-                                else if (yAxisConfiguredMax <= 5) precision = 1; 
-                                else if (yAxisConfiguredMax <= 10 && yAxisConfiguredMax % 1 !== 0) precision = 1; 
+                                if (yAxisMax <= 0.5) precision = 2; 
+                                else if (yAxisMax <= 2) precision = 2; 
+                                else if (yAxisMax <= 5) precision = 1; 
+                                else if (yAxisMax <= 10 && yAxisMax % 1 !== 0) precision = 1; 
                                 return value.toFixed(precision) + '%'; 
                             },
                             font: {size: 12}
@@ -884,6 +912,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     rateTypeSelect.addEventListener('change', updateChart);
+
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => zoomChart(0.75, 0));
+    }
+
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => zoomChart(1.35, 0));
+    }
+
+    if (zoomResetBtn) {
+        zoomResetBtn.addEventListener('click', () => setChartYZoomMax(null));
+    }
+
+    if (resultsChartCanvas) {
+        resultsChartCanvas.addEventListener('wheel', event => {
+            if (rateTypeSelect.value === 'evHeatMap') return;
+            event.preventDefault();
+            const chartArea = chartInstance?.chartArea;
+            const yScale = chartInstance?.scales?.y;
+            let anchor = null;
+            if (chartArea && yScale && event.offsetY >= chartArea.top && event.offsetY <= chartArea.bottom) {
+                anchor = yScale.getValueForPixel(event.offsetY);
+            }
+            zoomChart(event.deltaY < 0 ? 0.85 : 1.18, anchor);
+        }, { passive: false });
+    }
 
     // --- NEW: Event Listeners for Select/Deselect All ---
     if (selectAllBtn) {

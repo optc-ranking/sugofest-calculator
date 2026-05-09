@@ -3,6 +3,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const LAST_CALCULATED_STATE_KEY = '__last_calculated_banner_state_v2__';
     const DEFAULT_SETUPS_MANIFEST_PATH = 'default-setups-manifest.json';
     const SELECTED_SETUP_KEY = 'sugofestHomepageSelectedSetupKey';
+    const DEFAULT_SETUP_MIGRATION_KEY = 'sugofestHomepageDefaultSetupMigration';
+    const DEFAULT_SETUP_MIGRATION_VALUE = '12th-anniversary';
+    const DEFAULT_SETUP_KEYS = ['BUNDLED_12th_Anniversary', 'AUTOLOAD_12th_Anniversary'];
+    const LEGACY_DEFAULT_SETUP_KEYS = ['BUNDLED_11th_Anniversary', 'AUTOLOAD_11th_Anniversary'];
     const PROBABILITY_THRESHOLD_FOR_100_PERCENT = 0.9999;
 
     const setupSelect = document.getElementById('setupSelect');
@@ -12,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const overviewGraphTitle = document.getElementById('overviewGraphTitle');
     const overviewLegend = document.getElementById('overviewLegend');
     const overviewHeatmapContainer = document.getElementById('overviewHeatmapContainer');
+    const highValueFilter = document.getElementById('highValueFilter');
     const imageViewer = document.getElementById('imageViewer');
     const viewerImage = document.getElementById('viewerImage');
     const viewerStage = document.getElementById('viewerStage');
@@ -55,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let setups = [];
     let currentSetup = null;
     let activeMetric = 'normalizedRate';
+    let activeHighValuePartFilter = 'both';
     let chartInstance = null;
     let imageZoom = 1;
     let imageFitZoom = 1;
@@ -225,6 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function getInitialSetupKey() {
+        const storedSetupKey = localStorage.getItem(SELECTED_SETUP_KEY);
+        const migrationDone = localStorage.getItem(DEFAULT_SETUP_MIGRATION_KEY) === DEFAULT_SETUP_MIGRATION_VALUE;
+        const defaultSetupKey = DEFAULT_SETUP_KEYS.find(key => setups.some(setup => setup.key === key));
+
+        if (defaultSetupKey && (!storedSetupKey || (!migrationDone && LEGACY_DEFAULT_SETUP_KEYS.includes(storedSetupKey)))) {
+            localStorage.setItem(DEFAULT_SETUP_MIGRATION_KEY, DEFAULT_SETUP_MIGRATION_VALUE);
+            return defaultSetupKey;
+        }
+
+        return storedSetupKey;
+    }
+
     function setCurrentSetup(setupKey) {
         currentSetup = setups.find(setup => setup.key === setupKey) || setups[0] || null;
         if (!currentSetup) {
@@ -276,6 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
             .filter(id => optionMap.has(id))
             .map(id => optionMap.get(id))
             .filter(Boolean);
+    }
+
+    function bannerMatchesHighValueFilter(banner) {
+        if (activeHighValuePartFilter === 'both') return true;
+        const normalizedName = String(banner?.name || '').toLowerCase().replace(/\s+/g, '');
+        if (activeHighValuePartFilter === 'part1') return normalizedName === 'part1';
+        if (activeHighValuePartFilter === 'part2-6') return normalizedName === 'part2-6' || normalizedName === 'part2';
+        return true;
     }
 
     function getUnitRatesAndCostForMulti(unitId, multiNumber, unitsInCurrentBanner, stepsInCurrentBanner, forUniversalPhase = false) {
@@ -667,15 +694,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (activeMetric === 'normalizedRate' && max <= 0) return 100;
-        if (max <= 1) return 1;
-        if (max <= 5) return Math.ceil(max * 1.25);
-        if (max <= 10) return Math.ceil(max * 1.18);
-        return Math.min(100, Math.ceil((max * 1.12) / 5) * 5);
+        if (max <= 0.5) return Math.ceil(max * 1.12 * 20) / 20;
+        if (max <= 2) return Math.ceil(max * 1.10 * 10) / 10;
+        if (max <= 5) return Math.ceil(max * 1.08 * 4) / 4;
+        if (max <= 10) return Math.ceil(max * 1.06 * 2) / 2;
+        return Math.min(100, Math.ceil((max * 1.05) / 2.5) * 2.5);
     }
 
     function drawOverviewGraph() {
-        const series = getSelectedSeries();
+        const series = getSelectedSeries()
+            .filter(seriesItem => activeMetric !== 'probSuccessOnThisMultiOnly' || bannerMatchesHighValueFilter(seriesItem.banner));
         overviewGraphTitle.textContent = getMetricLabel(activeMetric).replace(' (%)', '');
+        if (highValueFilter) highValueFilter.hidden = activeMetric !== 'probSuccessOnThisMultiOnly';
 
         const results = series.map((seriesItem, index) => ({
             name: `${seriesItem.banner.name} - ${seriesItem.analysis.name}`,
@@ -992,6 +1022,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    document.querySelectorAll('.part-filter-btn').forEach(button => {
+        button.addEventListener('click', () => {
+            activeHighValuePartFilter = button.dataset.partFilter || 'both';
+            document.querySelectorAll('.part-filter-btn').forEach(btn => btn.classList.toggle('active', btn === button));
+            drawOverviewGraph();
+        });
+    });
+
     document.querySelectorAll('a[href^="detailed-input"], a[href="results.html"]').forEach(link => {
         link.addEventListener('click', () => saveCurrentSetupForAdvancedPages());
     });
@@ -1002,6 +1040,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const bundledSetups = await getBundledSetups();
         setups = mergeSetups(savedSetups, bundledSetups, currentWorkingSetup);
         renderSetupSelect();
-        setCurrentSetup(localStorage.getItem(SELECTED_SETUP_KEY));
+        setCurrentSetup(getInitialSetupKey());
     })();
 });

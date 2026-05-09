@@ -236,10 +236,40 @@ select {
     justify-content: flex-end;
 }
 
-.metric-btn.active {
+.metric-btn.active,
+.part-filter-btn.active {
     border-color: rgba(19, 138, 84, 0.5);
     background: var(--green-soft);
     color: var(--green);
+}
+
+.high-value-filter {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin: -6px 0 12px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.high-value-filter[hidden] {
+    display: none;
+}
+
+.part-toggle {
+    display: inline-flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.part-filter-btn {
+    min-height: 34px;
+    padding: 6px 11px;
+    border-color: var(--line-strong);
+    background: #ffffff;
+    color: var(--navy);
 }
 
 .chart-wrap {

@@ -94,12 +94,12 @@ body {
 
 main {
     display: grid;
-    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-        "controls controls"
-        "bulk bulk"
-        "checklist chart"
-        "download download";
+        "controls"
+        "checklist"
+        "chart"
+        "download";
     gap: 18px;
     width: min(100%, 1500px);
     margin: 0 auto;
@@ -143,11 +143,10 @@ main {
 }
 
 .checklist-bulk-controls {
-    grid-area: bulk;
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 10px;
-    padding: 14px 18px;
 }
 
 select {
@@ -216,23 +215,32 @@ button:focus-visible {
 
 #checklistContainerParent {
     grid-area: checklist;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
     align-self: start;
-    max-height: 760px;
+    max-height: 360px;
     overflow: auto;
     padding: 16px;
 }
 
-#checklistContainerParent::before {
-    content: "Banners & Analyses";
-    display: block;
-    margin-bottom: 12px;
+.checklist-header {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.checklist-header h3 {
+    margin: 0;
     color: var(--navy);
     font-size: 1.15rem;
     font-weight: 750;
 }
 
 #checklistContainerParent .banner-checklist-group {
-    margin: 0 0 12px;
+    margin: 0;
     padding: 0;
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -297,13 +305,30 @@ button:focus-visible {
     padding: 20px;
 }
 
-#chartContainerOuter::before {
-    content: "Graph";
-    display: block;
+.chart-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 12px;
+}
+
+.chart-card-header h3 {
+    margin: 0;
     color: var(--navy);
     font-size: 1.15rem;
     font-weight: 750;
+}
+
+.chart-zoom-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.chart-zoom-controls[hidden] {
+    display: none;
 }
 
 #chartContainer {
@@ -526,7 +551,6 @@ a:hover {
         grid-template-columns: 1fr;
         grid-template-areas:
             "controls"
-            "bulk"
             "checklist"
             "chart"
             "download";
@@ -534,10 +558,32 @@ a:hover {
     }
 
     .results-controls,
-    .checklist-bulk-controls,
     .download-section {
         display: grid;
         justify-content: stretch;
+    }
+
+    .checklist-header {
+        display: grid;
+        align-items: stretch;
+    }
+
+    #checklistContainerParent {
+        grid-template-columns: 1fr;
+    }
+
+    .checklist-bulk-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .chart-card-header {
+        display: grid;
+    }
+
+    .chart-zoom-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
     }
 
     .download-section {

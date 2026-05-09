@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sugofest Calculation Results</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="results_style.css?v=20260508-refresh">
+    <link rel="stylesheet" href="results_style.css?v=20260508-checklist-columns-zoom">
 </head>
 <body>
     <header class="app-header">
@@ -27,18 +27,26 @@
             </select>
         </div>
 
-        <!-- START: Select/Deselect All Buttons -->
-        <div class="checklist-bulk-controls card">
-            <button id="selectAllBtn" class="utility-button utility-button-small">Select All</button>
-            <button id="deselectAllBtn" class="utility-button utility-button-small">Deselect All</button>
-        </div>
-        <!-- END: Select/Deselect All Buttons -->
-
         <div id="checklistContainerParent" class="card">
+             <div class="checklist-header">
+                <h3>Banners & Analyses</h3>
+                <div class="checklist-bulk-controls">
+                    <button id="selectAllBtn" class="utility-button utility-button-small">Select All</button>
+                    <button id="deselectAllBtn" class="utility-button utility-button-small">Deselect All</button>
+                </div>
+             </div>
              <!-- Checklist sections per banner will be dynamically added here -->
         </div>
 
         <div id="chartContainerOuter" class="card">
+            <div class="chart-card-header">
+                <h3>Graph</h3>
+                <div class="chart-zoom-controls" id="chartZoomControls">
+                    <button type="button" id="zoomOutBtn" class="utility-button utility-button-small">Zoom Out</button>
+                    <button type="button" id="zoomResetBtn" class="utility-button utility-button-small">Reset</button>
+                    <button type="button" id="zoomInBtn" class="utility-button utility-button-small">Zoom In</button>
+                </div>
+            </div>
             <div id="chartContainer">
                  <canvas id="resultsChart"></canvas>
                  <div id="heatmapContainer" class="heatmap-container" hidden></div>
@@ -52,6 +60,6 @@
         </div>
     </main>
 
-    <script src="results.js?v=20260508-refresh"></script>
+    <script src="results.js?v=20260508-y-axis-zoom"></script>
 </body>
 </html>

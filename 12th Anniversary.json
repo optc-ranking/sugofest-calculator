@@ -1,0 +1,754 @@
+{
+  "lastModified": "2026-05-09T03:40:25.095Z",
+  "infographic": "12th Anniversary Infographic.png",
+  "banners": [
+    {
+      "id": "banner-12th-part-1",
+      "name": "Part 1",
+      "totalMultis": 60,
+      "steps": [
+        {
+          "id": "step-12th-part-1-1",
+          "appliesToMultis": [
+            1,
+            7,
+            9,
+            11,
+            12,
+            14,
+            16,
+            17,
+            19,
+            21,
+            22,
+            24,
+            26,
+            27,
+            29,
+            31,
+            37,
+            39,
+            41,
+            42,
+            44,
+            46,
+            47,
+            49,
+            51,
+            52,
+            54,
+            56,
+            57,
+            59
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-1-2",
+          "appliesToMultis": [
+            2,
+            3,
+            4,
+            5,
+            13,
+            23,
+            28,
+            32,
+            33,
+            34,
+            35,
+            43,
+            53,
+            58
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-1-3",
+          "appliesToMultis": [
+            6,
+            8,
+            15,
+            25,
+            36,
+            38,
+            45,
+            55
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-1-4",
+          "appliesToMultis": [
+            10,
+            40
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-1-5",
+          "appliesToMultis": [
+            18,
+            48
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-1-6",
+          "appliesToMultis": [
+            20,
+            50
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-1-7",
+          "appliesToMultis": [
+            30,
+            60
+          ],
+          "gemCost": 50
+        }
+      ],
+      "units": [
+        {
+          "id": "unit-12th-new-12th-anni-legend",
+          "name": "New 12th Anni Legend",
+          "universalBaseRate": "0.100",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-1-1",
+              "finalPosterRate": "0.300",
+              "baseRate10Pulls": "0.100"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-2",
+              "finalPosterRate": "0.667",
+              "baseRate10Pulls": "0.100"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-3",
+              "finalPosterRate": "2",
+              "baseRate10Pulls": "0.100"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-4",
+              "finalPosterRate": "0.667",
+              "baseRate10Pulls": "0.667"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-5",
+              "finalPosterRate": "2",
+              "baseRate10Pulls": "0.100"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-6",
+              "baseRate10Pulls": "0.333",
+              "finalPosterRate": "0.333"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-7",
+              "finalPosterRate": "20",
+              "baseRate10Pulls": "0.100"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-qck-g5",
+          "name": "QCK G5",
+          "universalBaseRate": "0.3",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-1-1",
+              "finalPosterRate": "0.9",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-2",
+              "finalPosterRate": "2",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-3",
+              "finalPosterRate": "6",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-4",
+              "baseRate10Pulls": "2",
+              "finalPosterRate": "2"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-5",
+              "finalPosterRate": "5",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-7",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-6",
+              "baseRate10Pulls": "1",
+              "finalPosterRate": "1"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-rate-boosted-legend",
+          "name": "Rate-Boosted Legend",
+          "universalBaseRate": "0.3",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-1-1",
+              "finalPosterRate": "0.9",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-2",
+              "finalPosterRate": "2",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-3",
+              "finalPosterRate": "6",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-4",
+              "baseRate10Pulls": "2",
+              "finalPosterRate": "2"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-5",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-7",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.3"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-6",
+              "baseRate10Pulls": "1",
+              "finalPosterRate": "1"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-other-super-sugo-exclusive",
+          "name": "Other Super Sugo Exclusive",
+          "universalBaseRate": "0.016",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-1-2",
+              "finalPosterRate": "0.109",
+              "baseRate10Pulls": "0.016"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-3",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.016"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-4",
+              "finalPosterRate": "0.109",
+              "baseRate10Pulls": "0.109"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-5",
+              "finalPosterRate": "1.735",
+              "baseRate10Pulls": "0.016"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-6",
+              "baseRate10Pulls": "0.054",
+              "finalPosterRate": "0.054"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-7",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.016"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-1",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.016"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-other-legends",
+          "name": "Other Legends",
+          "universalBaseRate": "0.036",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-1-2",
+              "finalPosterRate": "0.242",
+              "baseRate10Pulls": "0.036"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-3",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.036"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-4",
+              "finalPosterRate": "0.242",
+              "baseRate10Pulls": "0.242"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-5",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.036"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-6",
+              "baseRate10Pulls": "0.121",
+              "finalPosterRate": "0.121"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-7",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.036"
+            },
+            {
+              "globalStepDefId": "step-12th-part-1-1",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.036"
+            }
+          ]
+        }
+      ],
+      "customAnalyses": [
+        {
+          "id": "analysis-12th-5x-new-12th-anni-legend",
+          "name": "5x New 12th Anni Legend",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-5x-new-12th-anni-legend",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 5
+            }
+          ]
+        },
+        {
+          "id": "analysis-12th-4x-new-12th-anni-legend",
+          "name": "4x New 12th Anni Legend",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-4x-new-12th-anni-legend",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 4
+            }
+          ]
+        },
+        {
+          "id": "analysis-12th-3x-new-12th-anni-legend",
+          "name": "3x New 12th Anni Legend",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-3x-new-12th-anni-legend",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 3
+            }
+          ]
+        },
+        {
+          "id": "analysis-12th-2x-new-12th-anni-legend",
+          "name": "2x New 12th Anni Legend",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-2x-new-12th-anni-legend",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 2
+            }
+          ]
+        },
+        {
+          "id": "analysis-12th-1x-new-12th-anni-legend",
+          "name": "1x New 12th Anni Legend",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-1x-new-12th-anni-legend",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 1
+            }
+          ]
+        },
+        {
+          "id": "analysis-1778260676335-ygqlcgps2",
+          "name": "All Super Exclusives",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-1778260697476-ld8vz505g",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 5
+            },
+            {
+              "id": "constituent-1778260700606-dicy5yb0h",
+              "unitId": "unit-12th-qck-g5",
+              "multiplier": 1
+            },
+            {
+              "id": "constituent-1778260703228-fgv2wij68",
+              "unitId": "unit-12th-other-super-sugo-exclusive",
+              "multiplier": 49
+            }
+          ]
+        },
+        {
+          "id": "analysis-1778260803708-ojv7jin51",
+          "name": "All Anni Exclusives",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-1778260813041-u89ocr0bu",
+              "unitId": "unit-12th-rate-boosted-legend",
+              "multiplier": 4
+            },
+            {
+              "id": "constituent-1778260819046-yxcui29bj",
+              "unitId": "unit-12th-other-legends",
+              "multiplier": 25
+            }
+          ]
+        },
+        {
+          "id": "analysis-1778297122628-9cp91byky",
+          "name": "All Super + Anni Exclusives",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-1778297472126-c839ap6zo",
+              "unitId": "unit-12th-new-12th-anni-legend",
+              "multiplier": 5
+            },
+            {
+              "id": "constituent-1778297474089-ozmr69ejx",
+              "unitId": "unit-12th-qck-g5",
+              "multiplier": 1
+            },
+            {
+              "id": "constituent-1778297485355-dtjm9pkuj",
+              "unitId": "unit-12th-rate-boosted-legend",
+              "multiplier": 4
+            },
+            {
+              "id": "constituent-1778297486974-x5zexka6a",
+              "unitId": "unit-12th-other-super-sugo-exclusive",
+              "multiplier": 49
+            },
+            {
+              "id": "constituent-1778297499136-xzaru4i3n",
+              "unitId": "unit-12th-other-legends",
+              "multiplier": 25
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "banner-12th-part-2-6",
+      "name": "Part 2-6",
+      "totalMultis": 30,
+      "steps": [
+        {
+          "id": "step-12th-part-2-6-1",
+          "appliesToMultis": [
+            2,
+            3,
+            13,
+            18
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-2-6-2",
+          "appliesToMultis": [
+            5,
+            8,
+            25
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-2-6-3",
+          "appliesToMultis": [
+            10,
+            20
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-2-6-4",
+          "appliesToMultis": [
+            15
+          ],
+          "gemCost": 50
+        },
+        {
+          "id": "step-12th-part-2-6-5",
+          "appliesToMultis": [
+            30
+          ],
+          "gemCost": 50
+        }
+      ],
+      "units": [
+        {
+          "id": "unit-12th-part-2-6-new-12th-anni-legend",
+          "name": "New 12th Anni Legend",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-2-6-1",
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-2",
+              "finalPosterRate": "6.667",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-3",
+              "finalPosterRate": "12.5",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-4",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-5",
+              "finalPosterRate": "100",
+              "baseRate10Pulls": "0.500"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-part-2-6-super-limited",
+          "name": "Super Limited",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-2-6-5",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-1",
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-2",
+              "finalPosterRate": "6.667",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-3",
+              "finalPosterRate": "12.5",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-4",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-part-2-6-limited",
+          "name": "Limited",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-2-6-1",
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-2",
+              "finalPosterRate": "6.667",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-3",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-4",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-5",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
+            }
+          ]
+        },
+        {
+          "id": "unit-12th-part-2-6-other",
+          "name": "Other",
+          "universalBaseRate": "0.500",
+          "stepOverrides": [
+            {
+              "globalStepDefId": "step-12th-part-2-6-1",
+              "finalPosterRate": "3.333",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-2",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-3",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-4",
+              "finalPosterRate": "1.667",
+              "baseRate10Pulls": "1.667"
+            },
+            {
+              "globalStepDefId": "step-12th-part-2-6-5",
+              "finalPosterRate": "0",
+              "baseRate10Pulls": "0.500"
+            }
+          ]
+        }
+      ],
+      "customAnalyses": [
+        {
+          "id": "analysis-12th-part-2-6-all-supers-p2-6",
+          "name": "All Super Exclusives (P2-6)",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-all-supers-p2-6-0",
+              "unitId": "unit-12th-part-2-6-new-12th-anni-legend",
+              "multiplier": 1
+            },
+            {
+              "id": "constituent-12th-all-supers-p2-6-1",
+              "unitId": "unit-12th-part-2-6-super-limited",
+              "multiplier": 2
+            },
+            {
+              "id": "constituent-12th-all-supers-p2-6-2",
+              "unitId": "unit-12th-part-2-6-limited",
+              "multiplier": 3
+            },
+            {
+              "id": "constituent-12th-all-supers-p2-6-3",
+              "unitId": "unit-12th-part-2-6-other",
+              "multiplier": 3
+            }
+          ]
+        },
+        {
+          "id": "analysis-12th-part-2-6-all-supers-anni-p2-6",
+          "name": "All Anni Exclusives (P2-6)",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-12th-all-supers-anni-p2-6-1",
+              "unitId": "unit-12th-part-2-6-super-limited",
+              "multiplier": 2
+            },
+            {
+              "id": "constituent-12th-all-supers-anni-p2-6-2",
+              "unitId": "unit-12th-part-2-6-limited",
+              "multiplier": 2
+            },
+            {
+              "id": "constituent-12th-all-supers-anni-p2-6-3",
+              "unitId": "unit-12th-part-2-6-other",
+              "multiplier": 1
+            }
+          ]
+        },
+        {
+          "id": "analysis-1778260964853-pvmy9qb9c",
+          "name": "All Super + Anni Exclusives (P2-6)",
+          "type": "custom_group",
+          "constituents": [
+            {
+              "id": "constituent-1778261051449-x3ddm58hu",
+              "unitId": "unit-12th-part-2-6-new-12th-anni-legend",
+              "multiplier": 1
+            },
+            {
+              "id": "constituent-1778261052411-1qk7m853j",
+              "unitId": "unit-12th-part-2-6-super-limited",
+              "multiplier": 4
+            },
+            {
+              "id": "constituent-1778261053704-msyv4r3vg",
+              "unitId": "unit-12th-part-2-6-limited",
+              "multiplier": 5
+            },
+            {
+              "id": "constituent-1778261054584-bw8ewqf1u",
+              "unitId": "unit-12th-part-2-6-other",
+              "multiplier": 4
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "homepageAnalysisDefaults": {
+    "lineGraphs": [
+      "banner-12th-part-1::custom::analysis-12th-5x-new-12th-anni-legend",
+      "banner-12th-part-1::custom::analysis-12th-4x-new-12th-anni-legend",
+      "banner-12th-part-1::custom::analysis-12th-3x-new-12th-anni-legend",
+      "banner-12th-part-1::custom::analysis-12th-2x-new-12th-anni-legend",
+      "banner-12th-part-1::custom::analysis-12th-1x-new-12th-anni-legend",
+      "banner-12th-part-2-6::single::unit-12th-part-2-6-new-12th-anni-legend"
+    ],
+    "heatmaps": {
+      "newLegend": {
+        "comparisonId": "banner-12th-part-2-6::single::unit-12th-part-2-6-new-12th-anni-legend",
+        "rowIds": [
+          "banner-12th-part-1::custom::analysis-12th-5x-new-12th-anni-legend",
+          "banner-12th-part-1::custom::analysis-12th-4x-new-12th-anni-legend",
+          "banner-12th-part-1::custom::analysis-12th-3x-new-12th-anni-legend",
+          "banner-12th-part-1::custom::analysis-12th-2x-new-12th-anni-legend",
+          "banner-12th-part-1::custom::analysis-12th-1x-new-12th-anni-legend"
+        ]
+      },
+      "supers": {
+        "rows": [
+          {
+            "rowId": "banner-12th-part-1::custom::analysis-1778297122628-9cp91byky",
+            "comparisonId": "banner-12th-part-2-6::custom::analysis-1778260964853-pvmy9qb9c"
+          },
+          {
+            "rowId": "banner-12th-part-1::custom::analysis-1778260676335-ygqlcgps2",
+            "comparisonId": "banner-12th-part-2-6::custom::analysis-12th-part-2-6-all-supers-p2-6"
+          },
+          {
+            "rowId": "banner-12th-part-1::custom::analysis-1778260803708-ojv7jin51",
+            "comparisonId": "banner-12th-part-2-6::custom::analysis-12th-part-2-6-all-supers-anni-p2-6"
+          }
+        ]
+      }
+    }
+  }
+}
