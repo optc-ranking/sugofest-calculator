@@ -287,12 +287,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const yellow = [245, 205, 72];
         const red = [211, 65, 65];
 
-        if (diff <= 0) return `rgb(${green.join(", ")})`;
+        if (diff <= -25) return `rgb(${green.join(", ")})`;
         if (diff >= 50) return `rgb(${red.join(", ")})`;
 
-        const start = diff <= 25 ? green : yellow;
-        const end = diff <= 25 ? yellow : red;
-        const t = diff <= 25 ? diff / 25 : (diff - 25) / 25;
+        const start = diff <= 0 ? green : yellow;
+        const end = diff <= 0 ? yellow : red;
+        const t = diff <= 0 ? (diff + 25) / 25 : diff / 50;
         const mixed = start.map((channel, index) => Math.round(channel + (end[index] - channel) * t));
         return `rgb(${mixed.join(", ")})`;
     }
@@ -475,8 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const legend = document.createElement("div");
         legend.className = "heatmap-legend";
         legend.innerHTML = `
-            <span><i class="heatmap-legend-swatch heatmap-green"></i>Same or cheaper than switching now</span>
-            <span><i class="heatmap-legend-swatch heatmap-yellow"></i>About 25 gems more</span>
+            <span><i class="heatmap-legend-swatch heatmap-green"></i>25+ gems cheaper than switching now</span>
+            <span><i class="heatmap-legend-swatch heatmap-yellow"></i>About the same as switching now</span>
             <span><i class="heatmap-legend-swatch heatmap-red"></i>50+ gems more</span>
         `;
         heatmapContainer.appendChild(legend);
@@ -586,8 +586,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const legend = document.createElement("div");
         legend.className = "heatmap-legend";
         legend.innerHTML = `
-            <span><i class="heatmap-legend-swatch heatmap-green"></i>Same or cheaper than switching now</span>
-            <span><i class="heatmap-legend-swatch heatmap-yellow"></i>About 25 gems more</span>
+            <span><i class="heatmap-legend-swatch heatmap-green"></i>25+ gems cheaper than switching now</span>
+            <span><i class="heatmap-legend-swatch heatmap-yellow"></i>About the same as switching now</span>
             <span><i class="heatmap-legend-swatch heatmap-red"></i>50+ gems more</span>
         `;
         heatmapContainer.appendChild(legend);
